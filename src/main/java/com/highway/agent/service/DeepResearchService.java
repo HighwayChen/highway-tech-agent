@@ -79,17 +79,26 @@ public class DeepResearchService {
             } catch (Exception ignored) {}
         };
 
+        // 注册报告生成前置回调，在 reporter 节点开始时推送 generating_report 事件
+        Runnable onGeneratingReport = () -> {
+            try {
+                reasoningSink.tryEmitNext(toSse(SseEvent.generatingReport(Map.of())));
+            } catch (Exception ignored) {}
+        };
+
         // 图事件流：在 boundedElastic 线程中注册 tokenConsumer
         Flux<ServerSentEvent<String>> graphFlux = compiledResearchGraph.stream(inputs, config)
                 .subscribeOn(Schedulers.boundedElastic())
                 .doOnSubscribe(s -> {
                     LlmStreamingHelper.setTokenConsumer(tokenConsumer);
                     LlmStreamingHelper.setReportTokenConsumer(reportTokenConsumer);
+                    LlmStreamingHelper.setOnGeneratingReport(onGeneratingReport);
                 })
                 .map(this::nodeOutputToSse)
                 .doFinally(signal -> {
                     LlmStreamingHelper.clearTokenConsumer();
                     LlmStreamingHelper.clearReportTokenConsumer();
+                    LlmStreamingHelper.clearOnGeneratingReport();
                     reasoningSink.tryEmitComplete();
                 });
 
@@ -125,6 +134,12 @@ public class DeepResearchService {
             } catch (Exception ignored) {}
         };
 
+        Runnable onGeneratingReport = () -> {
+            try {
+                reasoningSink.tryEmitNext(toSse(SseEvent.generatingReport(Map.of())));
+            } catch (Exception ignored) {}
+        };
+
         // updateState 是阻塞调用，必须在 boundedElastic 线程执行
         return Mono.fromCallable(() -> {
                     log.info("Calling updateState for session: {}", sessionId);
@@ -140,11 +155,13 @@ public class DeepResearchService {
                             .doOnSubscribe(s -> {
                                 LlmStreamingHelper.setTokenConsumer(tokenConsumer);
                                 LlmStreamingHelper.setReportTokenConsumer(reportTokenConsumer);
+                                LlmStreamingHelper.setOnGeneratingReport(onGeneratingReport);
                             })
                             .map(this::nodeOutputToSse)
                             .doFinally(signal -> {
                                 LlmStreamingHelper.clearTokenConsumer();
                                 LlmStreamingHelper.clearReportTokenConsumer();
+                                LlmStreamingHelper.clearOnGeneratingReport();
                                 reasoningSink.tryEmitComplete();
                             });
 

@@ -50,6 +50,9 @@ public class ReporterNode implements NodeAction {
 
         log.info("Generating final report for: {}", originalQuestion);
 
+        // 通知前端报告生成开始
+        LlmStreamingHelper.notifyGeneratingReport();
+
         String report = LlmStreamingHelper.streamReportCall(chatClient,
                 promptTemplate.reporterPrompt(originalQuestion, planSummary, extractedContents, references));
 

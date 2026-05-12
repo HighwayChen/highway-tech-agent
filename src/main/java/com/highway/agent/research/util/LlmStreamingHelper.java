@@ -17,28 +17,46 @@ public class LlmStreamingHelper {
 
     private static final Duration DEFAULT_TIMEOUT = Duration.ofMinutes(5);
 
-    /** 线程级 token 消费者，由 DeepResearchService 注册以接收实时 token */
-    private static final ThreadLocal<Consumer<String>> tokenConsumer = new ThreadLocal<>();
+    /** 全局 token 消费者（volatile 保证跨线程可见性） */
+    private static volatile Consumer<String> tokenConsumer;
 
-    /** 报告 token 消费者，用于报告生成时推送每个 token 到前端 */
-    private static final ThreadLocal<Consumer<String>> reportTokenConsumer = new ThreadLocal<>();
+    /** 全局报告 token 消费者（volatile 保证跨线程可见性） */
+    private static volatile Consumer<String> reportTokenConsumer;
+
+    /** 报告生成前置回调，用于在 reporter 节点开始时通知前端 */
+    private static volatile Runnable onGeneratingReport;
 
     private LlmStreamingHelper() {}
 
     public static void setTokenConsumer(Consumer<String> consumer) {
-        tokenConsumer.set(consumer);
+        tokenConsumer = consumer;
     }
 
     public static void clearTokenConsumer() {
-        tokenConsumer.remove();
+        tokenConsumer = null;
     }
 
     public static void setReportTokenConsumer(Consumer<String> consumer) {
-        reportTokenConsumer.set(consumer);
+        reportTokenConsumer = consumer;
     }
 
     public static void clearReportTokenConsumer() {
-        reportTokenConsumer.remove();
+        reportTokenConsumer = null;
+    }
+
+    public static void setOnGeneratingReport(Runnable callback) {
+        onGeneratingReport = callback;
+    }
+
+    public static void clearOnGeneratingReport() {
+        onGeneratingReport = null;
+    }
+
+    /** 由 ReporterNode 调用，触发 generating_report 事件通知前端 */
+    public static void notifyGeneratingReport() {
+        if (onGeneratingReport != null) {
+            try { onGeneratingReport.run(); } catch (Exception ignored) {}
+        }
     }
 
     public static String streamCall(ChatClient chatClient, String userPrompt) {
@@ -52,7 +70,7 @@ public class LlmStreamingHelper {
      * @return 累积的完整响应文本，超时或异常时返回空字符串
      */
     public static String streamCall(ChatClient chatClient, String userPrompt, Duration timeout) {
-        Consumer<String> consumer = tokenConsumer.get();
+        Consumer<String> consumer = tokenConsumer;
         try {
             Flux<String> contentFlux = chatClient.prompt()
                     .user(userPrompt)
@@ -88,8 +106,8 @@ public class LlmStreamingHelper {
      * 而非推理消费者（reasoning），避免两类内容混淆。
      */
     public static String streamReportCall(ChatClient chatClient, String userPrompt) {
-        Consumer<String> reportConsumer = reportTokenConsumer.get();
-        Consumer<String> reasoningConsumer = tokenConsumer.get();
+        Consumer<String> reportConsumer = reportTokenConsumer;
+        Consumer<String> reasoningConsumer = tokenConsumer;
         try {
             Flux<String> contentFlux = chatClient.prompt()
                     .user(userPrompt)
