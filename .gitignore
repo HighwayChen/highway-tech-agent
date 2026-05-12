@@ -18,5 +18,8 @@ target/
 *.tar.gz
 *.zip
 
+# Subprojects
+spring-ai-alibaba-admin/
+
 # OS
 .DS_Store
