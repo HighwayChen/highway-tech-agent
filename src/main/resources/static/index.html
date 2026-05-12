@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Highway Agent</title>
+    <link rel="stylesheet" href="vs2015.min.css">
+    <script src="marked.min.js"></script>
+    <script src="highlight.min.js"></script>
+    <script src="echarts.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; height: 100vh; display: flex; background: #fff; }
+
+        /* ========== 侧边栏 ========== */
+        .sidebar { width: 260px; background: #fff; display: flex; flex-direction: column; border-right: 1px solid #e8e8ec; flex-shrink: 0; }
+        .sidebar-header { padding: 16px 12px 8px; }
+        .new-chat-btn { width: 100%; padding: 11px 16px; background: #fff; border: 1px solid #e0e0e5; color: #333; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .new-chat-btn:hover { background: #f5f5f7; }
+        .sidebar-label { padding: 12px 16px 6px; font-size: 12px; color: #999; font-weight: 500; }
+        .conversation-list { flex: 1; overflow-y: auto; padding: 4px 8px; }
+        .conversation-item { padding: 10px 14px; border-radius: 8px; cursor: pointer; font-size: 14px; margin-bottom: 1px; display: flex; justify-content: space-between; align-items: center; transition: background 0.1s; color: #555; }
+        .conversation-item:hover { background: #f5f5f7; }
+        .conversation-item.active { background: #ececf1; color: #333; font-weight: 500; }
+        .conversation-item .conv-info { flex: 1; min-width: 0; }
+        .conversation-item .conv-summary { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .conversation-item .delete-btn { display: none; background: none; border: none; color: #aaa; cursor: pointer; font-size: 15px; margin-left: 8px; flex-shrink: 0; }
+        .conversation-item:hover .delete-btn { display: block; }
+
+        /* ========== 主区域 ========== */
+        .main { flex: 1; display: flex; flex-direction: column; background: #fff; min-width: 0; }
+
+        /* 空状态（居中输入） */
+        .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 24px; }
+        .empty-state .brand { font-size: 28px; font-weight: 700; color: #1a1a2e; margin-bottom: 6px; letter-spacing: -0.5px; }
+        .empty-state .brand-sub { font-size: 14px; color: #aaa; margin-bottom: 32px; }
+        .empty-state .center-input-box { width: 100%; max-width: 640px; }
+
+        /* 对话区域 */
+        .chat-area { flex: 1; display: none; flex-direction: column; }
+        .chat-area.active { display: flex; }
+        .chat-container { flex: 1; overflow-y: auto; padding: 24px 0; background: #fff; }
+        .chat-inner { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+
+        /* 消息 */
+        .message { margin-bottom: 28px; display: flex; gap: 14px; align-items: flex-start; }
+        .message.user { justify-content: flex-end; }
+        .message.assistant { justify-content: flex-start; }
+        .msg-avatar { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
+        .message.assistant .msg-avatar { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: #fff; }
+        .message-bubble { line-height: 1.7; font-size: 15px; max-width: 100%; }
+        .message.user .message-bubble { background: #f0f0f5; color: #333; padding: 10px 16px; border-radius: 16px; border-bottom-right-radius: 4px; white-space: pre-wrap; max-width: 70%; font-size: 14px; }
+
+        /* Markdown */
+        .markdown-body { line-height: 1.75; word-wrap: break-word; color: #1a1a1a; }
+        .markdown-body p { margin: 0 0 10px; }
+        .markdown-body p:last-child { margin-bottom: 0; }
+        .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 { margin: 18px 0 8px; font-weight: 600; color: #111; }
+        .markdown-body h2 { font-size: 1.2em; }
+        .markdown-body h3 { font-size: 1.05em; }
+        .markdown-body ul, .markdown-body ol { margin: 0 0 10px; padding-left: 22px; }
+        .markdown-body li { margin: 4px 0; }
+        .markdown-body blockquote { margin: 0 0 10px; padding: 8px 14px; border-left: 3px solid #e0e0e5; color: #555; background: #fafafa; border-radius: 4px; }
+        .markdown-body code { background: #f3f4f6; padding: 2px 5px; border-radius: 4px; font-size: 0.87em; font-family: "JetBrains Mono", Menlo, Monaco, Consolas, monospace; color: #c026d3; }
+        .markdown-body pre { margin: 0 0 10px; padding: 14px; background: #1e1e1e; border-radius: 10px; overflow-x: auto; }
+        .markdown-body pre code { background: none; padding: 0; color: #d4d4d4; }
+        .markdown-body table { border-collapse: collapse; margin: 0 0 10px; width: 100%; font-size: 14px; }
+        .markdown-body th, .markdown-body td { border: 1px solid #e5e5ea; padding: 7px 12px; text-align: left; }
+        .markdown-body th { background: #f9fafb; font-weight: 600; }
+        .markdown-body a { color: #6366f1; text-decoration: none; }
+        .markdown-body a:hover { text-decoration: underline; }
+        .markdown-body hr { border: none; border-top: 1px solid #eee; margin: 14px 0; }
+
+        /* 参考文献 */
+        .references { margin-top: 14px; padding: 10px 14px; background: #f9fafb; border-radius: 8px; border: 1px solid #f0f0f3; }
+        .references-header { display: flex; align-items: center; gap: 7px; cursor: pointer; padding: 4px 0; user-select: none; }
+        .references-header:hover { opacity: 0.8; }
+        .references-header .arrow { display: inline-block; transition: transform 0.15s; font-size: 8px; color: #aaa; }
+        .references-header .arrow.open { transform: rotate(90deg); }
+        .references-header h4 { font-size: 12px; color: #888; margin: 0; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+        .references-header .count { font-size: 11px; color: #aaa; font-weight: normal; }
+        .reference-list { display: none; margin-top: 6px; }
+        .reference-list.open { display: block; }
+        .reference-item { font-size: 13px; color: #6366f1; margin: 3px 0; }
+        .reference-item a { color: #6366f1; text-decoration: none; }
+        .reference-item a:hover { text-decoration: underline; }
+
+        /* 建议问题 */
+        .suggested { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+        .suggested-tag { padding: 7px 14px; background: #f5f5f7; border: 1px solid #e8e8ec; border-radius: 18px; font-size: 13px; color: #555; cursor: pointer; transition: all 0.15s; }
+        .suggested-tag:hover { background: #ececf1; color: #333; }
+
+        /* 思考过程 */
+        .thinking-container { margin-bottom: 14px; }
+        .thinking-toggle { display: flex; align-items: center; gap: 7px; cursor: pointer; padding: 7px 10px; color: #888; font-size: 13px; user-select: none; border-radius: 6px; transition: background 0.1s; }
+        .thinking-toggle:hover { background: #f5f5f7; }
+        .thinking-toggle .arrow { display: inline-block; transition: transform 0.15s; font-size: 8px; color: #aaa; }
+        .thinking-toggle .arrow.open { transform: rotate(90deg); }
+        .thinking-steps { display: none; margin-top: 6px; padding-left: 14px; }
+        .thinking-steps.open { display: block; }
+        .thinking-step { margin-bottom: 8px; font-size: 13px; line-height: 1.6; color: #666; }
+        .thinking-step .step-label { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-right: 6px; vertical-align: top; }
+        .thinking-step .step-label.thought-label { background: #fef3c7; color: #92400e; }
+        .thinking-step .step-label.action-label { background: #dbeafe; color: #1e40af; }
+        .thinking-step .step-label.observation-label { background: #d1fae5; color: #065f46; }
+        .thinking-step .step-content.observation-content { display: block; margin-top: 3px; padding: 6px 10px; background: #f9fafb; border-radius: 5px; border: 1px solid #f0f0f3; max-height: 100px; overflow-y: auto; font-family: monospace; font-size: 12px; color: #666; }
+
+        /* ========== 输入区 - 豆包风格 ========== */
+        .input-section { padding: 0 24px 24px; }
+        .input-box-wrap { max-width: 720px; margin: 0 auto; }
+
+        /* 模式切换 pill tabs - 豆包风格 */
+        .mode-tabs { display: flex; gap: 4px; margin-bottom: 10px; padding: 3px; background: #f0f0f5; border-radius: 10px; width: fit-content; }
+        .mode-tab { padding: 7px 18px; border: none; background: transparent; color: #888; font-size: 13px; font-weight: 500; border-radius: 8px; cursor: pointer; transition: all 0.15s; white-space: nowrap; display: flex; align-items: center; gap: 5px; }
+        .mode-tab:hover { color: #555; }
+        .mode-tab.active { background: #fff; color: #333; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .mode-tab .tab-icon { font-size: 14px; }
+
+        /* 输入框容器 */
+        .input-box { display: flex; align-items: flex-end; gap: 10px; background: #f5f5f7; border: 1px solid #e8e8ec; border-radius: 16px; padding: 10px 12px 10px 18px; transition: border-color 0.2s, box-shadow 0.2s; }
+        .input-box:focus-within { border-color: #d0d0d5; box-shadow: 0 0 0 3px rgba(0,0,0,0.04); }
+        .input-box.research-focus { border-color: #c4b5fd; box-shadow: 0 0 0 3px rgba(139,92,246,0.1); }
+        .chat-input { flex: 1; padding: 4px 0; border: none; background: transparent; font-size: 15px; outline: none; resize: none; color: #333; min-height: 24px; max-height: 120px; line-height: 1.5; }
+        .chat-input::placeholder { color: #aaa; }
+        .send-btn { width: 36px; height: 36px; background: #1a1a2e; color: #fff; border: none; border-radius: 10px; cursor: pointer; font-size: 15px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; }
+        .send-btn:hover { background: #2d2d4e; }
+        .send-btn:disabled { background: #d0d0d5; cursor: not-allowed; }
+        .send-btn.research { background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 10px; }
+        .send-btn.research:hover { opacity: 0.9; }
+        .stop-btn { width: 36px; height: 36px; background: #ef4444; color: #fff; border: none; border-radius: 10px; cursor: pointer; font-size: 13px; display: none; align-items: center; justify-content: center; flex-shrink: 0; }
+        .stop-btn:hover { background: #dc2626; }
+
+        .typing-indicator { color: #999; font-size: 14px; }
+        .typing-indicator::before { content: '工作中'; }
+        .typing-indicator::after { content: ''; display: inline-block; width: 5px; height: 5px; background: #999; border-radius: 50%; animation: pulse 1.2s infinite; margin-left: 4px; vertical-align: middle; }
+        @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+        /* ========== 深度研究专属样式 - DeepSeek 风格 ========== */
+
+        /* 研究容器 */
+        .research-container { margin-bottom: 16px; }
+
+        /* 研究阶段卡片 */
+        .research-phase-card { margin-bottom: 12px; border: 1px solid #e8e8ec; border-radius: 10px; background: #fff; overflow: hidden; }
+        .research-phase-card.active { border-color: #c4b5fd; background: #faf5ff; }
+
+        /* 阶段头部 */
+        .phase-header { padding: 12px 16px; display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
+        .phase-header:hover { background: rgba(0,0,0,0.02); }
+        .phase-icon { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .phase-icon.loading { border: 2px solid #e8e8ec; border-top-color: #8b5cf6; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        .phase-icon.done { color: #10b981; font-size: 18px; }
+        .phase-icon.waiting { color: #f59e0b; font-size: 18px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .phase-title { flex: 1; font-size: 14px; font-weight: 500; color: #333; }
+        .phase-arrow { font-size: 10px; color: #aaa; transition: transform 0.2s; }
+        .phase-arrow.open { transform: rotate(90deg); }
+
+        /* 阶段内容 */
+        .phase-content { padding: 0 16px 12px 46px; display: none; }
+        .phase-content.open { display: block; }
+        .phase-detail { font-size: 13px; color: #666; line-height: 1.6; margin-bottom: 8px; }
+
+        /* 推理过程 */
+        .reasoning-content { padding: 10px 12px; background: #f9fafb; border-radius: 6px; font-family: "JetBrains Mono", Menlo, Consolas, monospace; font-size: 12px; line-height: 1.6; color: #555; white-space: pre-wrap; word-break: break-word; max-height: 200px; overflow-y: auto; margin-top: 8px; }
+        .reasoning-content .cursor { display: inline-block; width: 2px; height: 14px; background: #8b5cf6; animation: blink 0.8s step-end infinite; vertical-align: text-bottom; margin-left: 1px; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* 子问题列表 */
+        .subquestions-list { margin-top: 8px; }
+        .subquestion-item { padding: 8px 12px; background: #f9fafb; border-radius: 6px; margin-bottom: 6px; font-size: 13px; color: #555; border-left: 3px solid #8b5cf6; }
+
+        /* 搜索结果统计 */
+        .search-stats { display: flex; gap: 16px; margin-top: 8px; font-size: 12px; }
+        .stat-item { display: flex; align-items: center; gap: 6px; color: #666; }
+        .stat-value { font-weight: 600; color: #8b5cf6; }
+
+        /* 旧的推理框样式保留用于兼容 */
+        .reasoning-box { display: none; }
+
+        /* 澄清卡片 */
+        .clarify-card { margin-bottom: 16px; padding: 16px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; }
+        .clarify-card h4 { font-size: 14px; color: #92400e; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+        .clarify-card .cq-list { list-style: none; padding: 0; margin-bottom: 12px; }
+        .clarify-card .cq-list li { padding: 8px 12px; background: #fff; border-radius: 8px; margin-bottom: 6px; font-size: 14px; color: #78350f; border: 1px solid #fde68a; }
+        .clarify-card .cq-input { width: 100%; padding: 10px 14px; border: 1px solid #fde68a; border-radius: 10px; font-size: 14px; outline: none; background: #fff; }
+        .clarify-card .cq-input:focus { border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245,158,11,0.1); }
+        .clarify-card .cq-btn { margin-top: 8px; padding: 9px 20px; background: #f59e0b; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; }
+        .clarify-card .cq-btn:hover { background: #d97706; }
+
+        /* 计划确认卡片 */
+        .plan-card { margin-bottom: 16px; padding: 16px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; }
+        .plan-card h4 { font-size: 14px; color: #1e40af; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+        .plan-card .plan-summary { font-size: 13px; color: #1e3a5f; margin-bottom: 10px; padding: 8px 12px; background: #fff; border-radius: 8px; }
+        .plan-card .sq-item { padding: 8px 12px; background: #fff; border-radius: 8px; margin-bottom: 6px; border: 1px solid #dbeafe; font-size: 13px; display: flex; gap: 8px; align-items: baseline; }
+        .plan-card .sq-idx { display: inline-flex; width: 20px; height: 20px; background: #3b82f6; color: #fff; border-radius: 50%; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+        .plan-card .sq-queries { font-size: 12px; color: #93c5fd; margin-top: 2px; }
+        .plan-card .plan-btns { display: flex; gap: 8px; margin-top: 12px; }
+        .plan-card .plan-btns button { padding: 8px 20px; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+        .plan-card .confirm-btn { background: #3b82f6; color: #fff; }
+        .plan-card .confirm-btn:hover { background: #2563eb; }
+        .plan-card .adjust-btn { background: #fff; color: #3b82f6; border: 1px solid #bfdbfe !important; }
+        .plan-card .adjust-btn:hover { background: #eff6ff; }
+        .plan-card .adjust-input { width: 100%; margin-top: 8px; padding: 8px 12px; border: 1px solid #dbeafe; border-radius: 8px; font-size: 13px; outline: none; display: none; }
+        .plan-card .adjust-input:focus { border-color: #3b82f6; }
+
+        /* 研究报告 */
+        .research-report { border-left: 3px solid #8b5cf6; padding-left: 14px; }
+
+        /* ========== 分屏布局 ========== */
+        .main.split-active { flex-direction: row; }
+        .main.split-active .chat-area,
+        .main.split-active .empty-state { flex: 1; min-width: 0; border-right: 1px solid #e8e8ec; }
+        .report-panel { display: none; flex: 1; flex-direction: column; min-width: 0; background: #fff; }
+        .report-panel.active { display: flex; }
+        .report-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid #e8e8ec; background: #fff; flex-shrink: 0; }
+        .report-panel-header .rp-title { font-size: 15px; font-weight: 600; color: #333; }
+        .report-panel-close { background: none; border: none; font-size: 18px; color: #999; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+        .report-panel-close:hover { background: #f0f0f5; color: #333; }
+        .report-panel-content { flex: 1; overflow-y: auto; padding: 24px; }
+
+        /* 报告卡片 */
+        .report-cards { display: flex; gap: 10px; margin-top: 14px; }
+        .report-card { flex: 1; padding: 14px 16px; border-radius: 10px; cursor: pointer; transition: all 0.15s; border: 1px solid; }
+        .report-card:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .report-card.md-card { background: #f0f9ff; border-color: #bae6fd; }
+        .report-card.md-card:hover { background: #e0f2fe; }
+        .report-card.visual-card { background: #faf5ff; border-color: #e9d5ff; }
+        .report-card.visual-card:hover { background: #f3e8ff; }
+        .report-card .card-icon { font-size: 22px; margin-bottom: 6px; }
+        .report-card .card-title { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+        .report-card .card-desc { font-size: 12px; color: #888; }
+
+        /* ========== 可视化大屏 ========== */
+        .visual-dashboard { max-width: 900px; margin: 0 auto; }
+        .dashboard-title { font-size: 22px; font-weight: 700; color: #1a1a2e; margin-bottom: 6px; }
+        .dashboard-summary { font-size: 15px; color: #555; line-height: 1.7; margin-bottom: 24px; }
+        .stats-row { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+        .stat-card { flex: 1; min-width: 140px; padding: 16px; background: #fff; border-radius: 10px; border: 1px solid #e8e8ec; text-align: center; }
+        .stat-card .stat-value { font-size: 28px; font-weight: 700; color: #6366f1; }
+        .stat-card .stat-label { font-size: 13px; color: #888; margin-top: 4px; }
+        .stat-card .stat-trend { font-size: 12px; margin-top: 4px; }
+        .stat-card .stat-trend.up { color: #10b981; }
+        .stat-card .stat-trend.down { color: #ef4444; }
+        .findings-section { margin-bottom: 24px; }
+        .findings-section h3 { font-size: 16px; font-weight: 600; color: #333; margin-bottom: 12px; }
+        .finding-card { padding: 14px 16px; background: #fff; border-radius: 10px; border: 1px solid #e8e8ec; margin-bottom: 8px; display: flex; gap: 12px; align-items: flex-start; }
+        .finding-card .finding-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+        .finding-card .finding-title { font-size: 14px; font-weight: 600; color: #333; margin-bottom: 3px; }
+        .finding-card .finding-content { font-size: 13px; color: #666; line-height: 1.6; }
+        .charts-section { margin-bottom: 24px; }
+        .charts-section h3 { font-size: 16px; font-weight: 600; color: #333; margin-bottom: 12px; }
+        .chart-card { background: #fff; border-radius: 10px; border: 1px solid #e8e8ec; padding: 16px; margin-bottom: 16px; }
+        .chart-card .chart-title { font-size: 14px; font-weight: 600; color: #333; margin-bottom: 8px; }
+        .chart-container { width: 100%; height: 350px; }
+        .conclusions-section { margin-bottom: 24px; }
+        .conclusions-section h3 { font-size: 16px; font-weight: 600; color: #333; margin-bottom: 12px; }
+        .conclusion-item { padding: 8px 0; font-size: 14px; color: #555; line-height: 1.6; display: flex; gap: 8px; }
+        .conclusion-item .bullet { color: #8b5cf6; font-weight: 700; flex-shrink: 0; }
+
+        /* 滚动条 */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d0d0d5; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #b0b0b5; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <button class="new-chat-btn" onclick="newChat()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                新建对话
+            </button>
+        </div>
+        <div class="sidebar-label">对话历史</div>
+        <div class="conversation-list" id="conversationList"></div>
+    </div>
+
+    <div class="main">
+        <!-- 空状态 -->
+        <div class="empty-state" id="emptyState">
+            <div class="brand">Highway</div>
+            <div class="brand-sub">AI 联网问答助手</div>
+            <div class="center-input-box">
+                <div class="mode-tabs">
+                    <button class="mode-tab active" data-mode="chat" onclick="switchMode('chat')">
+                        <span class="tab-icon">&#128172;</span> 对话
+                    </button>
+                    <button class="mode-tab" data-mode="research" onclick="switchMode('research')">
+                        <span class="tab-icon">&#128269;</span> 深度研究
+                    </button>
+                </div>
+                <div class="input-box" id="emptyInputBox">
+                    <textarea class="chat-input" id="emptyChatInput" rows="1" placeholder="有什么想问的..." onkeydown="handleInputKey(event, 'empty')"></textarea>
+                    <button class="send-btn" id="emptySendBtn" onclick="sendFromEmpty()">&#10148;</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 对话区域 -->
+        <div class="chat-area" id="chatArea">
+            <div class="chat-container" id="chatContainer">
+                <div class="chat-inner" id="chatInner"></div>
+            </div>
+            <div class="input-section">
+                <div class="input-box-wrap">
+                    <div class="mode-tabs">
+                        <button class="mode-tab active" data-mode="chat" onclick="switchMode('chat')">
+                            <span class="tab-icon">&#128172;</span> 对话
+                        </button>
+                        <button class="mode-tab" data-mode="research" onclick="switchMode('research')">
+                            <span class="tab-icon">&#128269;</span> 深度研究
+                        </button>
+                    </div>
+                    <div class="input-box" id="mainInputBox">
+                        <textarea class="chat-input" id="mainChatInput" rows="1" placeholder="有什么想问的..." onkeydown="handleInputKey(event, 'main')"></textarea>
+                        <button class="send-btn" id="sendBtn" onclick="sendFromMain()">&#10148;</button>
+                        <button class="stop-btn" id="stopBtn" onclick="stopStream()">&#9632;</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 报告查看面板 -->
+        <div class="report-panel" id="reportPanel">
+            <div class="report-panel-header">
+                <span class="rp-title" id="reportPanelTitle">报告</span>
+                <button class="report-panel-close" onclick="closeReportPanel()">&times;</button>
+            </div>
+            <div class="report-panel-content" id="reportPanelContent"></div>
+        </div>
+    </div>
+
+<script>
+    marked.setOptions({
+        highlight: function(code, lang) {
+            if (lang && hljs.getLanguage(lang)) return hljs.highlight(code, { language: lang }).value;
+            return hljs.highlightAuto(code).value;
+        },
+        breaks: true
+    });
+
+    let conversationId = null;
+    let isStreaming = false;
+    let currentEventSource = null;
+    let mode = 'chat';
+    let researchSessionId = null;
+    let hasMessages = false;
+    let currentReportMd = null;
+    let currentReportVisual = null;
+    let currentReportRefs = null;
+    let activeReportType = null;
+    var visualChartInstances = [];
+
+    // ========== 模式切换 ==========
+    function switchMode(m) {
+        mode = m;
+        document.querySelectorAll('.mode-tab').forEach(function(tab) {
+            tab.classList.toggle('active', tab.dataset.mode === m);
+        });
+        document.querySelectorAll('.input-box').forEach(function(box) {
+            box.classList.toggle('research-focus', m === 'research');
+        });
+        document.querySelectorAll('.send-btn').forEach(function(btn) {
+            btn.classList.toggle('research', m === 'research');
+        });
+        var ph = m === 'research' ? '输入深度研究问题...' : '有什么想问的...';
+        document.getElementById('emptyChatInput').placeholder = ph;
+        document.getElementById('mainChatInput').placeholder = ph;
+    }
+
+    // ========== 布局切换 ==========
+    function showEmpty() {
+        hasMessages = false;
+        document.getElementById('emptyState').style.display = 'flex';
+        document.getElementById('chatArea').classList.remove('active');
+    }
+
+    function showChat() {
+        hasMessages = true;
+        document.getElementById('emptyState').style.display = 'none';
+        document.getElementById('chatArea').classList.add('active');
+    }
+
+    function newChat() {
+        conversationId = null;
+        researchSessionId = null;
+        currentReportMd = null;
+        currentReportVisual = null;
+        currentReportRefs = null;
+        activeReportType = null;
+        visualChartInstances.forEach(function(c) { c.dispose(); });
+        visualChartInstances = [];
+        closeReportPanel();
+        document.getElementById('chatInner').innerHTML = '';
+        showEmpty();
+        loadConversations();
+    }
+
+    // ========== 自动增高 textarea ==========
+    function autoGrow(el) {
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+    }
+    document.getElementById('emptyChatInput').addEventListener('input', function() { autoGrow(this); });
+    document.getElementById('mainChatInput').addEventListener('input', function() { autoGrow(this); });
+
+    function handleInputKey(e, from) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (from === 'empty') sendFromEmpty();
+            else sendFromMain();
+        }
+    }
+
+    // ========== 会话管理 ==========
+    async function loadConversations(autoSelect) {
+        try {
+            var res = await fetch('/api/conversations');
+            var data = await res.json();
+            var list = document.getElementById('conversationList');
+            list.innerHTML = data.map(function(item) {
+                var summary = escapeHtml(item.summary || '新对话');
+                return '<div class="conversation-item ' + (item.id === conversationId ? 'active' : '') + '" onclick="switchConversation(\'' + item.id + '\')">' +
+                    '<div class="conv-info"><span class="conv-summary">' + summary + '</span></div>' +
+                    '<button class="delete-btn" onclick="event.stopPropagation();deleteConversation(\'' + item.id + '\')">&times;</button>' +
+                '</div>';
+            }).join('');
+            if (autoSelect && data.length > 0 && !conversationId) switchConversation(data[0].id);
+        } catch (e) { console.error(e); }
+    }
+
+    async function switchConversation(id) {
+        conversationId = id;
+        loadConversations();
+        var inner = document.getElementById('chatInner');
+        inner.innerHTML = '<div style="text-align:center;padding:40px;color:#aaa;font-size:14px;">加载中...</div>';
+        showChat();
+        try {
+            var res = await fetch('/api/conversations/' + id + '/messages');
+            var messages = await res.json();
+            inner.innerHTML = '';
+            messages.forEach(function(msg) {
+                if (msg.role === 'user') addBubble('user', msg.content);
+                else addAssistantBubble(msg.content);
+            });
+            scrollBottom();
+        } catch (e) { inner.innerHTML = ''; }
+    }
+
+    async function deleteConversation(id) {
+        await fetch('/api/conversations/' + id, { method: 'DELETE' });
+        if (conversationId === id) newChat(); else loadConversations();
+    }
+
+    // ========== 消息渲染 ==========
+    function addBubble(role, content) {
+        var inner = document.getElementById('chatInner');
+        var div = document.createElement('div');
+        div.className = 'message ' + role;
+        if (role === 'user') {
+            div.innerHTML = '<div class="message-bubble">' + escapeHtml(content) + '</div>';
+        } else {
+            div.innerHTML = '<div class="msg-avatar">H</div><div class="message-bubble"><div class="markdown-body">' + renderMarkdown(content) + '</div></div>';
+        }
+        inner.appendChild(div);
+        scrollBottom();
+        return div;
+    }
+
+    function addAssistantBubble(content) {
+        var inner = document.getElementById('chatInner');
+        var div = document.createElement('div');
+        div.className = 'message assistant';
+        div.innerHTML =
+            '<div class="msg-avatar">H</div>' +
+            '<div class="message-bubble">' +
+                '<div class="thinking-container" style="display:none">' +
+                    '<div class="thinking-toggle" onclick="toggleThinking(this)">' +
+                        '<span class="arrow">&#9654;</span> 思考过程' +
+                    '</div>' +
+                    '<div class="thinking-steps"></div>' +
+                '</div>' +
+                '<div class="research-progress" style="display:none"></div>' +
+                '<div class="reasoning-box"><span class="reasoning-text"></span><span class="cursor"></span></div>' +
+                '<div class="answer-content markdown-body typing-indicator"></div>' +
+                '<div class="references-content"></div>' +
+                '<div class="suggested-content"></div>' +
+            '</div>';
+        inner.appendChild(div);
+        if (content) {
+            div.querySelector('.answer-content').classList.remove('typing-indicator');
+            div.querySelector('.answer-content').innerHTML = content;
+        }
+        scrollBottom();
+        return div;
+    }
+
+    function toggleThinking(el) {
+        var steps = el.nextElementSibling;
+        var arrow = el.querySelector('.arrow');
+        steps.classList.toggle('open');
+        arrow.classList.toggle('open');
+    }
+
+    function scrollBottom() {
+        var c = document.getElementById('chatContainer');
+        c.scrollTop = c.scrollHeight;
+    }
+
+    function escapeHtml(t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+    function renderMarkdown(text) {
+        if (typeof marked !== 'undefined' && marked.parse) {
+            try { return marked.parse(text); } catch(e) {}
+        }
+        return '<div style="white-space:pre-wrap;word-break:break-word;">' + escapeHtml(text) + '</div>';
+    }
+
+    // ========== 发送入口 ==========
+    function sendFromEmpty() {
+        var input = document.getElementById('emptyChatInput');
+        var msg = input.value.trim();
+        if (!msg || isStreaming) return;
+        input.value = ''; input.style.height = 'auto';
+        showChat();
+        doSend(msg);
+    }
+
+    function sendFromMain() {
+        var input = document.getElementById('mainChatInput');
+        var msg = input.value.trim();
+        if (!msg || isStreaming) return;
+        input.value = ''; input.style.height = 'auto';
+        doSend(msg);
+    }
+
+    function doSend(message) {
+        isStreaming = true;
+        document.getElementById('sendBtn').disabled = true;
+        document.getElementById('stopBtn').style.display = 'flex';
+
+        addBubble('user', message);
+
+        if (mode === 'research') {
+            if (!researchSessionId) researchSessionId = 'rs-' + Date.now();
+            startResearch(message);
+        } else {
+            startChat(message);
+        }
+    }
+
+    // ========== 普通对话 ==========
+    function startChat(message) {
+        var div = addAssistantBubble('');
+        var answerEl = div.querySelector('.answer-content');
+        var refsEl = div.querySelector('.references-content');
+        var sugEl = div.querySelector('.suggested-content');
+        var thinkContainer = div.querySelector('.thinking-container');
+        var thinkSteps = div.querySelector('.thinking-steps');
+        var answerText = '';
+        var stepCount = 0;
+
+        var url = '/api/chat?message=' + encodeURIComponent(message) +
+            (conversationId ? '&conversationId=' + encodeURIComponent(conversationId) : '');
+        var es = new EventSource(url);
+        currentEventSource = es;
+
+        es.addEventListener('node', function(e) {
+            var d = JSON.parse(e.data);
+            if (d.outputType === 'AGENT_MODEL_FINISHED' && d.message && d.message.hasToolCalls) {
+                thinkContainer.style.display = 'block';
+                if (d.message.text) { addThinkStep(thinkSteps, 'thought', d.message.text); stepCount++; }
+                if (d.message.toolCalls) d.message.toolCalls.forEach(function(tc) {
+                    var a = tc.arguments || ''; try { a = JSON.parse(a).query || a; } catch(x){}
+                    addThinkStep(thinkSteps, 'action', a); stepCount++;
+                });
+                thinkSteps.classList.add('open');
+                thinkContainer.querySelector('.arrow').classList.add('open');
+                scrollBottom();
+            } else if (d.outputType === 'AGENT_TOOL_FINISHED' && d.message) {
+                (d.message.responses || []).forEach(function(c) { addThinkStep(thinkSteps, 'observation', c); stepCount++; });
+                scrollBottom();
+            } else if (d.outputType === 'AGENT_MODEL_STREAMING' && d.message && d.message.text) {
+                answerEl.classList.remove('typing-indicator');
+                thinkSteps.classList.remove('open');
+                thinkContainer.querySelector('.arrow').classList.remove('open');
+                answerText += d.message.text;
+                answerEl.innerHTML = renderMarkdown(answerText);
+                scrollBottom();
+            } else if (d.outputType === 'ERROR') {
+                answerEl.classList.remove('typing-indicator');
+                answerEl.textContent = d.message || '出错了';
+            }
+        });
+        es.addEventListener('references', function(e) { renderRefs(refsEl, JSON.parse(e.data)); });
+        es.addEventListener('suggested', function(e) { renderSuggested(sugEl, JSON.parse(e.data)); });
+        es.addEventListener('conversation', function(e) { conversationId = JSON.parse(e.data); loadConversations(); });
+        es.addEventListener('done', function() { finishStream(es); });
+        es.onerror = function() { es.close(); currentEventSource = null; answerEl.classList.remove('typing-indicator'); if (!answerText) answerEl.textContent = '连接错误'; resetUI(); };
+    }
+
+    function addThinkStep(container, type, content) {
+        var labels = { thought: '思考', action: '搜索', observation: '结果' };
+        var div = document.createElement('div');
+        div.className = 'thinking-step';
+        if (type === 'observation') {
+            div.innerHTML = '<span class="step-label ' + type + '-label">' + labels[type] + '</span><div class="step-content observation-content">' + escapeHtml(content) + '</div>';
+        } else {
+            div.innerHTML = '<span class="step-label ' + type + '-label">' + labels[type] + '</span><span class="step-content">' + escapeHtml(content) + '</span>';
+        }
+        container.appendChild(div);
+    }
+
+    function renderRefs(el, refs) {
+        el.innerHTML = '<div class="references">' +
+            '<div class="references-header" onclick="toggleReferences(this)">' +
+                '<span class="arrow">&#9654;</span>' +
+                '<h4>参考来源</h4>' +
+                '<span class="count">(' + refs.length + ')</span>' +
+            '</div>' +
+            '<div class="reference-list">' +
+                refs.map(function(r) { return '<div class="reference-item">[' + r.id + '] <a href="' + r.url + '" target="_blank">' + escapeHtml(r.title) + '</a></div>'; }).join('') +
+            '</div>' +
+        '</div>';
+    }
+
+    function toggleReferences(el) {
+        var list = el.nextElementSibling;
+        var arrow = el.querySelector('.arrow');
+        list.classList.toggle('open');
+        arrow.classList.toggle('open');
+    }
+
+    function renderSuggested(el, qs) {
+        el.innerHTML = '<div class="suggested">' + qs.map(function(q) { return '<span class="suggested-tag" onclick="askSuggested(this)">' + escapeHtml(q) + '</span>'; }).join('') + '</div>';
+    }
+
+    // ========== 深度研究 ==========
+    var phaseLabels = {
+        analyzing: '分析问题', clarifying: '补充信息', plan_generated: '生成计划', awaiting_confirmation: '确认计划',
+        searching: '搜索资料', extracting: '提取内容', deep_searching: '深度搜索', critiquing: '评估充分性',
+        revising_plan: '修订计划', generating_report: '生成报告', complete: '研究完成', progress: '处理中'
+    };
+    var phaseOrder = ['analyzing','clarifying','plan_generated','awaiting_confirmation','searching','extracting','deep_searching','critiquing','revising_plan','generating_report','complete'];
+
+    function startResearch(message) {
+        var div = addAssistantBubble('');
+        var answerEl = div.querySelector('.answer-content');
+        var refsEl = div.querySelector('.references-content');
+        var progressEl = div.querySelector('.research-progress');
+
+        // 创建研究容器
+        var researchContainer = document.createElement('div');
+        researchContainer.className = 'research-container';
+        // 添加初始加载提示
+        researchContainer.innerHTML = '<div class="phase-detail" style="color:#999;padding:12px 0;">正在启动深度研究...</div>';
+        progressEl.appendChild(researchContainer);
+        progressEl.style.display = 'block';
+
+        var phaseCards = {}; // 存储各阶段卡片
+        var currentPhase = null;
+        var isWaitingForUser = false; // 标记是否在等待用户输入
+
+        answerEl.classList.remove('typing-indicator');
+        answerEl.style.display = 'none';
+
+        var url = '/api/deep-research?message=' + encodeURIComponent(message) +
+            (researchSessionId ? '&sessionId=' + encodeURIComponent(researchSessionId) : '');
+        var es = new EventSource(url);
+        currentEventSource = es;
+
+        // 绑定所有研究事件
+        phaseOrder.forEach(function(phase) {
+            es.addEventListener(phase, function(e) {
+                var data;
+                try { data = JSON.parse(e.data); } catch(ex) { data = {}; }
+
+                console.log('[Research] Phase:', phase, 'Data:', data);
+
+                // 检查是否进入等待用户输入状态
+                if (phase === 'awaiting_confirmation' || phase === 'clarifying') {
+                    isWaitingForUser = true;
+                    console.log('[Research] Waiting for user input');
+                }
+
+                handleResearchPhaseCard(phase, data, researchContainer, phaseCards, answerEl, refsEl);
+            });
+        });
+
+        // 实时推理 token
+        es.addEventListener('reasoning', function(e) {
+            try {
+                var data = JSON.parse(e.data);
+                var token = data.token || '';
+                if (currentPhase && phaseCards[currentPhase]) {
+                    var reasoningEl = phaseCards[currentPhase].querySelector('.reasoning-content');
+                    if (!reasoningEl) {
+                        var content = phaseCards[currentPhase].querySelector('.phase-content');
+                        reasoningEl = document.createElement('div');
+                        reasoningEl.className = 'reasoning-content';
+                        reasoningEl.innerHTML = '<span class="cursor"></span>';
+                        content.appendChild(reasoningEl);
+                    }
+                    var cursor = reasoningEl.querySelector('.cursor');
+                    reasoningEl.insertBefore(document.createTextNode(token), cursor);
+                    reasoningEl.scrollTop = reasoningEl.scrollHeight;
+                    scrollBottom();
+                }
+            } catch(ex) {}
+        });
+
+        // 实时报告 token
+        es.addEventListener('report_token', function(e) {
+            try {
+                var data = JSON.parse(e.data);
+                var token = data.token || '';
+                answerEl.style.display = 'block';
+                answerEl.classList.remove('typing-indicator');
+                if (!answerEl.dataset.reportBuffer) {
+                    answerEl.dataset.reportBuffer = '';
+                }
+                answerEl.dataset.reportBuffer += token;
+                answerEl.innerHTML = renderMarkdown(answerEl.dataset.reportBuffer);
+                scrollBottom();
+            } catch(ex) {}
+        });
+
+        es.addEventListener('progress', function(e) {
+            // 处理通用进度事件
+        });
+
+        es.addEventListener('done', function() {
+            // 如果不是等待用户输入，才隐藏进度条
+            if (!isWaitingForUser) {
+                progressEl.style.display = 'none';
+            }
+            finishStream(es);
+        });
+
+        es.addEventListener('error', function(e) {
+            // 中断等待用户输入时不显示错误
+        });
+
+        es.onerror = function(err) {
+            console.log('[Research] SSE error, isWaitingForUser:', isWaitingForUser);
+            es.close();
+            currentEventSource = null;
+
+            // 如果是等待用户输入，这是正常的中断，不显示错误
+            if (isWaitingForUser) {
+                console.log('[Research] Normal interruption for user input');
+                resetUI();
+                return;
+            }
+
+            // 否则才显示连接错误
+            console.error('[Research] Connection error');
+            if (!answerEl.style.display || answerEl.style.display === 'none') {
+                answerEl.style.display = 'block';
+                answerEl.classList.remove('typing-indicator');
+                answerEl.textContent = '连接错误';
+            }
+            resetUI();
+        };
+
+        // 保存当前阶段引用
+        window.currentResearchPhase = function(phase) { currentPhase = phase; };
+    }
+
+    function handleResearchPhaseCard(phase, data, container, phaseCards, answerEl, refsEl) {
+        window.currentResearchPhase(phase);
+
+        // 清除初始加载提示（如果存在）
+        if (Object.keys(phaseCards).length === 0) {
+            container.innerHTML = '';
+        }
+
+        var phaseLabels = {
+            analyzing: '分析问题',
+            clarifying: '补充信息',
+            plan_generated: '生成研究计划',
+            awaiting_confirmation: '确认计划',
+            searching: '搜索与提取',
+            critiquing: '评估充分性',
+            revising_plan: '修订计划',
+            generating_report: '生成报告',
+            complete: '研究完成'
+        };
+
+        var label = phaseLabels[phase] || phase;
+
+        // 创建或更新阶段卡片
+        if (!phaseCards[phase]) {
+            var card = document.createElement('div');
+            card.className = 'research-phase-card active';
+            card.innerHTML =
+                '<div class="phase-header" onclick="togglePhaseCard(this)">' +
+                    '<div class="phase-icon loading"></div>' +
+                    '<div class="phase-title">' + label + '</div>' +
+                    '<span class="phase-arrow open">&#9654;</span>' +
+                '</div>' +
+                '<div class="phase-content open"></div>';
+            container.appendChild(card);
+            phaseCards[phase] = card;
+        }
+
+        var card = phaseCards[phase];
+        var content = card.querySelector('.phase-content');
+        var icon = card.querySelector('.phase-icon');
+
+        // 处理特定阶段
+        if (phase === 'analyzing') {
+            content.innerHTML = '<div class="phase-detail">正在理解研究意图和目标...</div>';
+        } else if (phase === 'plan_generated') {
+            icon.className = 'phase-icon done';
+            icon.innerHTML = '✓';
+            card.classList.remove('active');
+            var plan = data.plan || {};
+            var sqCount = plan.subQuestions ? plan.subQuestions.length : 0;
+            var html = '<div class="phase-detail">已生成 ' + sqCount + ' 个子问题，预计 ' + (plan.estimatedSearchCount || '?') + ' 次搜索</div>';
+            if (plan.subQuestions && plan.subQuestions.length) {
+                html += '<div class="subquestions-list">';
+                plan.subQuestions.forEach(function(sq) {
+                    html += '<div class="subquestion-item">' + escapeHtml(sq.question || '') + '</div>';
+                });
+                html += '</div>';
+            }
+            content.innerHTML = html;
+        } else if (phase === 'awaiting_confirmation') {
+            icon.className = 'phase-icon waiting';
+            icon.innerHTML = '⏸';
+            showPlanCard(card, answerEl, data.plan || {});
+        } else if (phase === 'clarifying') {
+            icon.className = 'phase-icon waiting';
+            icon.innerHTML = '❓';
+            showClarifyCard(card, answerEl, data.questions || []);
+        } else if (phase === 'searching') {
+            var srcCount = data.searchResultCount || 0;
+            var extCount = data.extractedCount || 0;
+            var html = '<div class="search-stats">' +
+                '<div class="stat-item">搜索结果: <span class="stat-value">' + srcCount + '</span></div>' +
+                '<div class="stat-item">提取内容: <span class="stat-value">' + extCount + '</span></div>' +
+                '</div>';
+            if (data.subQuestions && data.subQuestions.length) {
+                html += '<div class="subquestions-list">';
+                data.subQuestions.forEach(function(sq) {
+                    html += '<div class="subquestion-item">' + escapeHtml(sq.question || '') + '</div>';
+                });
+                html += '</div>';
+            }
+            content.innerHTML = html;
+        } else if (phase === 'critiquing') {
+            var score = data.completenessScore ? Math.round(data.completenessScore * 100) : 0;
+            var suf = data.sufficient ? '充分' : '不充分';
+            var iter = data.iteration || 0;
+            if (data.sufficient) {
+                icon.className = 'phase-icon done';
+                icon.innerHTML = '✓';
+                card.classList.remove('active');
+            }
+            content.innerHTML = '<div class="phase-detail">第 ' + iter + ' 轮评估 - 完整度 ' + score + '%，结论：' + suf + '</div>';
+        } else if (phase === 'generating_report') {
+            content.innerHTML = '<div class="phase-detail">正在撰写研究报告...</div>';
+        } else if (phase === 'complete') {
+            icon.className = 'phase-icon done';
+            icon.innerHTML = '✓';
+            card.classList.remove('active');
+
+            // 存储报告数据
+            currentReportMd = data.report || answerEl.dataset.reportBuffer || '';
+            currentReportVisual = data.visualData || null;
+            currentReportRefs = data.references || [];
+
+            // 显示报告
+            answerEl.style.display = 'block';
+            answerEl.classList.remove('typing-indicator');
+            if (answerEl.dataset.reportBuffer) {
+                answerEl.innerHTML = renderMarkdown(answerEl.dataset.reportBuffer);
+                delete answerEl.dataset.reportBuffer;
+            } else if (data.report) {
+                answerEl.innerHTML = renderMarkdown(data.report);
+            }
+
+            // 显示参考文献
+            if (data.references && data.references.length) {
+                renderRefs(refsEl, data.references);
+            }
+
+            content.innerHTML = '<div class="phase-detail">研究报告已生成</div>';
+        }
+
+        scrollBottom();
+    }
+
+    function togglePhaseCard(header) {
+        var content = header.nextElementSibling;
+        var arrow = header.querySelector('.phase-arrow');
+        content.classList.toggle('open');
+        arrow.classList.toggle('open');
+    }
+
+    function showClarifyCard(card, answerEl, questions) {
+        var content = card.querySelector('.phase-content');
+        var html = '<div class="clarify-card">' +
+            '<h4>&#10067; 需要补充信息</h4>' +
+            '<ul class="cq-list">' + questions.map(function(q) { return '<li>' + escapeHtml(q) + '</li>'; }).join('') + '</ul>' +
+            '<input type="text" class="cq-input" placeholder="请输入你的回复..." onkeydown="if(event.key===\'Enter\')submitClarify(this)">' +
+            '<button class="cq-btn" onclick="submitClarify(this.previousElementSibling)">提交</button>' +
+        '</div>';
+        content.innerHTML = html;
+    }
+
+    function showPlanCard(card, answerEl, plan) {
+        var content = card.querySelector('.phase-content');
+        var sqHtml = (plan.subQuestions || []).map(function(sq) {
+            var q = (sq.searchQueries || []).map(escapeHtml).join(', ');
+            return '<div class="sq-item"><span class="sq-idx">' + sq.index + '</span><div><div>' + escapeHtml(sq.question) + '</div>' +
+                (q ? '<div class="sq-queries">' + q + '</div>' : '') + '</div></div>';
+        }).join('');
+        var html = '<div class="plan-card">' +
+            '<h4>&#128203; 研究计划（预计 ' + (plan.estimatedSearchCount || '?') + ' 次搜索）</h4>' +
+            (plan.summary ? '<div class="plan-summary">' + escapeHtml(plan.summary) + '</div>' : '') +
+            sqHtml +
+            '<input type="text" class="adjust-input" placeholder="输入调整方向...">' +
+            '<div class="plan-btns">' +
+                '<button class="confirm-btn" onclick="submitPlan(\'confirm\')">确认执行</button>' +
+                '<button class="adjust-btn" onclick="toggleAdjust()">调整计划</button>' +
+            '</div>' +
+        '</div>';
+        content.innerHTML = html;
+    }
+
+    function toggleAdjust() {
+        var inp = document.querySelector('.adjust-input');
+        inp.style.display = inp.style.display === 'block' ? 'none' : 'block';
+        if (inp.style.display === 'block') inp.focus();
+    }
+
+    function submitClarify(inputEl) {
+        var val = inputEl.value.trim();
+        if (!val) return;
+        var card = inputEl.closest('.clarify-card');
+        if (card) card.remove();
+        addBubble('user', val);
+        resumeResearch(researchSessionId, val);
+    }
+
+    function submitPlan(action) {
+        var card = document.querySelector('.plan-card');
+        var adjInput = document.querySelector('.adjust-input');
+        var msg = action;
+        if (action !== 'confirm' && adjInput && adjInput.value.trim()) {
+            msg = adjInput.value.trim();
+        }
+        if (card) card.remove();
+        addBubble('user', action === 'confirm' ? '确认执行' : '调整: ' + msg);
+        resumeResearch(researchSessionId, action === 'confirm' ? 'confirm' : msg);
+    }
+
+    function resumeResearch(sessionId, userResponse) {
+        isStreaming = true;
+        document.getElementById('sendBtn').disabled = true;
+        document.getElementById('stopBtn').style.display = 'flex';
+
+        var div = addAssistantBubble('');
+        var answerEl = div.querySelector('.answer-content');
+        var refsEl = div.querySelector('.references-content');
+        var progressEl = div.querySelector('.research-progress');
+
+        // 创建研究容器
+        var researchContainer = document.createElement('div');
+        researchContainer.className = 'research-container';
+        // 添加初始加载提示
+        researchContainer.innerHTML = '<div class="phase-detail" style="color:#999;padding:12px 0;">正在恢复研究...</div>';
+        progressEl.appendChild(researchContainer);
+        progressEl.style.display = 'block';
+
+        var phaseCards = {};
+        var currentPhase = null;
+
+        answerEl.classList.remove('typing-indicator');
+        answerEl.style.display = 'none';
+
+        var url = '/api/deep-research/' + encodeURIComponent(sessionId) + '/respond';
+
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: userResponse, responseType: 'clarification' })
+        }).then(function(res) {
+            if (!res.ok) {
+                answerEl.style.display = 'block';
+                answerEl.classList.remove('typing-indicator');
+                answerEl.innerHTML = '<div style="color:#ef4444;font-size:14px;">请求失败，请重试</div>';
+                progressEl.style.display = 'none';
+                resetUI();
+                return;
+            }
+
+            var reader = res.body.getReader();
+            var decoder = new TextDecoder();
+            var buffer = '';
+            var currentEvent = '';
+
+            function processStream() {
+                reader.read().then(function(result) {
+                    if (result.done) {
+                        progressEl.style.display = 'none';
+                        resetUI();
+                        return;
+                    }
+
+                    buffer += decoder.decode(result.value, { stream: true });
+                    var lines = buffer.split('\n');
+                    buffer = lines.pop();
+
+                    lines.forEach(function(line) {
+                        if (line.startsWith('event:')) {
+                            currentEvent = line.substring(6).trim();
+                            console.log('[Resume] Event:', currentEvent);
+                        } else if (line.startsWith('data:') && currentEvent) {
+                            var dataStr = line.substring(5).trim();
+                            try {
+                                var data = JSON.parse(dataStr);
+                                console.log('[Resume] Data for', currentEvent, ':', data);
+
+                                if (phaseOrder.includes(currentEvent)) {
+                                    handleResearchPhaseCard(currentEvent, data, researchContainer, phaseCards, answerEl, refsEl);
+                                } else if (currentEvent === 'reasoning') {
+                                    var token = data.token || '';
+                                    if (currentPhase && phaseCards[currentPhase]) {
+                                        var reasoningEl = phaseCards[currentPhase].querySelector('.reasoning-content');
+                                        if (!reasoningEl) {
+                                            var content = phaseCards[currentPhase].querySelector('.phase-content');
+                                            reasoningEl = document.createElement('div');
+                                            reasoningEl.className = 'reasoning-content';
+                                            reasoningEl.innerHTML = '<span class="cursor"></span>';
+                                            content.appendChild(reasoningEl);
+                                        }
+                                        var cursor = reasoningEl.querySelector('.cursor');
+                                        reasoningEl.insertBefore(document.createTextNode(token), cursor);
+                                        reasoningEl.scrollTop = reasoningEl.scrollHeight;
+                                        scrollBottom();
+                                    }
+                                } else if (currentEvent === 'report_token') {
+                                    var token = data.token || '';
+                                    answerEl.style.display = 'block';
+                                    if (!answerEl.dataset.reportBuffer) answerEl.dataset.reportBuffer = '';
+                                    answerEl.dataset.reportBuffer += token;
+                                    answerEl.innerHTML = renderMarkdown(answerEl.dataset.reportBuffer);
+                                    scrollBottom();
+                                } else if (currentEvent === 'done') {
+                                    progressEl.style.display = 'none';
+                                    resetUI();
+                                }
+                            } catch(e) {
+                                console.error('[Resume] Parse error:', e);
+                            }
+                            currentEvent = '';
+                        }
+                    });
+
+                    processStream();
+                }).catch(function(err) {
+                    console.error('[Resume] Stream error:', err);
+                    progressEl.style.display = 'none';
+                    resetUI();
+                });
+            }
+
+            // 保存当前阶段引用
+            window.currentResearchPhase = function(phase) { currentPhase = phase; };
+
+            processStream();
+        }).catch(function(err) {
+            answerEl.style.display = 'block';
+            answerEl.textContent = '连接错误';
+            progressEl.style.display = 'none';
+            resetUI();
+        });
+    }
+
+    // ========== 通用 ==========
+    function finishStream(es) { es.close(); currentEventSource = null; resetUI(); }
+    function resetUI() { isStreaming = false; document.getElementById('sendBtn').disabled = false; document.getElementById('stopBtn').style.display = 'none'; }
+
+    function stopStream() {
+        if (currentEventSource) { currentEventSource.close(); currentEventSource = null; }
+        if (mode === 'chat' && conversationId) fetch('/api/chat/stop?conversationId=' + encodeURIComponent(conversationId), { method: 'POST' }).catch(function(){});
+        if (mode === 'research' && researchSessionId) fetch('/api/deep-research/' + encodeURIComponent(researchSessionId) + '/stop', { method: 'POST' }).catch(function(){});
+        resetUI();
+    }
+
+    function askSuggested(el) { document.getElementById('mainChatInput').value = el.textContent; sendFromMain(); }
+
+    // ========== 报告面板 ==========
+    function openReportPanel(type) {
+        activeReportType = type;
+        var mainEl = document.querySelector('.main');
+        mainEl.classList.add('split-active');
+        var panel = document.getElementById('reportPanel');
+        panel.classList.add('active');
+
+        if (type === 'md') {
+            document.getElementById('reportPanelTitle').textContent = '文字报告';
+            var content = document.getElementById('reportPanelContent');
+            var html = '<div class="markdown-body" style="max-width:760px;margin:0 auto;">';
+            if (currentReportMd) {
+                html += '<div class="research-report">' + renderMarkdown(currentReportMd) + '</div>';
+            }
+            if (currentReportRefs && currentReportRefs.length) {
+                html += '<div class="references" style="margin-top:20px;"><h4>参考来源</h4>';
+                currentReportRefs.forEach(function(r) {
+                    html += '<div class="reference-item">[' + r.id + '] <a href="' + r.url + '" target="_blank">' + escapeHtml(r.title) + '</a></div>';
+                });
+                html += '</div>';
+            }
+            html += '</div>';
+            content.innerHTML = html;
+        } else if (type === 'visual') {
+            document.getElementById('reportPanelTitle').textContent = '可视化报告';
+            renderVisualDashboard();
+        }
+
+        // 高亮当前选中的卡片
+        document.querySelectorAll('.report-card').forEach(function(c) { c.style.outline = 'none'; });
+        var activeCard = document.querySelector('.' + type + '-card');
+        if (activeCard) activeCard.style.outline = '2px solid #6366f1';
+    }
+
+    function closeReportPanel() {
+        activeReportType = null;
+        var mainEl = document.querySelector('.main');
+        mainEl.classList.remove('split-active');
+        var panel = document.getElementById('reportPanel');
+        panel.classList.remove('active');
+        document.querySelectorAll('.report-card').forEach(function(c) { c.style.outline = 'none'; });
+    }
+
+    function renderVisualDashboard() {
+        // 清理旧的 ECharts 实例
+        visualChartInstances.forEach(function(c) { c.dispose(); });
+        visualChartInstances = [];
+
+        var data = currentReportVisual;
+        var content = document.getElementById('reportPanelContent');
+
+        if (!data || (!data.keyFindings && !data.statistics && !data.charts)) {
+            content.innerHTML = '<div style="text-align:center;padding:60px;color:#aaa;">可视化数据生成失败，请查看文字报告</div>';
+            return;
+        }
+
+        var html = '<div class="visual-dashboard">';
+
+        // 标题
+        if (data.title) html += '<div class="dashboard-title">' + escapeHtml(data.title) + '</div>';
+        if (data.summary) html += '<div class="dashboard-summary">' + escapeHtml(data.summary) + '</div>';
+
+        // 统计指标行
+        if (data.statistics && data.statistics.length > 0) {
+            html += '<div class="stats-row">';
+            data.statistics.forEach(function(s) {
+                var trendClass = s.trend === 'up' ? 'up' : (s.trend === 'down' ? 'down' : '');
+                var trendIcon = s.trend === 'up' ? '↑' : (s.trend === 'down' ? '↓' : '');
+                html += '<div class="stat-card">' +
+                    '<div class="stat-value">' + escapeHtml(s.value) + '</div>' +
+                    '<div class="stat-label">' + escapeHtml(s.label) + '</div>' +
+                    (trendIcon ? '<div class="stat-trend ' + trendClass + '">' + trendIcon + ' ' + (s.description || '') + '</div>' : '') +
+                '</div>';
+            });
+            html += '</div>';
+        }
+
+        // 核心发现
+        if (data.keyFindings && data.keyFindings.length > 0) {
+            html += '<div class="findings-section"><h3>核心发现</h3>';
+            data.keyFindings.forEach(function(f) {
+                html += '<div class="finding-card">' +
+                    '<div class="finding-icon">' + (f.icon || '💡') + '</div>' +
+                    '<div><div class="finding-title">' + escapeHtml(f.title) + '</div>' +
+                    '<div class="finding-content">' + escapeHtml(f.content) + '</div></div>' +
+                '</div>';
+            });
+            html += '</div>';
+        }
+
+        // 图表区域（仅容器，DOM 插入后初始化 ECharts）
+        if (data.charts && data.charts.length > 0) {
+            html += '<div class="charts-section"><h3>数据图表</h3>';
+            data.charts.forEach(function(chart) {
+                html += '<div class="chart-card">' +
+                    '<div class="chart-title">' + escapeHtml(chart.title) + '</div>' +
+                    '<div class="chart-container" id="' + chart.id + '"></div>' +
+                '</div>';
+            });
+            html += '</div>';
+        }
+
+        // 结论
+        if (data.conclusions && data.conclusions.length > 0) {
+            html += '<div class="conclusions-section"><h3>结论</h3>';
+            data.conclusions.forEach(function(c) {
+                html += '<div class="conclusion-item"><span class="bullet">▸</span><span>' + escapeHtml(c) + '</span></div>';
+            });
+            html += '</div>';
+        }
+
+        // 可视化面板也显示参考文献
+        if (currentReportRefs && currentReportRefs.length) {
+            html += '<div class="references" style="margin-top:24px;"><h4>参考来源</h4>';
+            currentReportRefs.forEach(function(r) {
+                html += '<div class="reference-item">[' + r.id + '] <a href="' + r.url + '" target="_blank">' + escapeHtml(r.title) + '</a></div>';
+            });
+            html += '</div>';
+        }
+
+        html += '</div>';
+        content.innerHTML = html;
+
+        // DOM 渲染后初始化 ECharts
+        if (data.charts && data.charts.length > 0) {
+            setTimeout(function() {
+                data.charts.forEach(function(chart) {
+                    var dom = document.getElementById(chart.id);
+                    if (dom) {
+                        try {
+                            var instance = echarts.init(dom);
+                            var option = typeof chart.option === 'string'
+                                ? JSON.parse(chart.option) : chart.option;
+                            if (option) {
+                                if (!option.color) {
+                                    option.color = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#14b8a6'];
+                                }
+                                instance.setOption(option);
+                            }
+                            visualChartInstances.push(instance);
+                        } catch (e) {
+                            console.error('ECharts init error for', chart.id, e);
+                        }
+                    }
+                });
+            }, 100);
+        }
+    }
+
+    // 窗口 resize 时刷新 ECharts
+    window.addEventListener('resize', function() {
+        visualChartInstances.forEach(function(c) { c.resize(); });
+    });
+
+    loadConversations(true);
+</script>
+</body>
+</html>

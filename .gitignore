@@ -1,0 +1,22 @@
+.gstack/
+
+# Maven
+target/
+*.jar
+*.war
+*.ear
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Claude
+.claude/
+
+# Archives
+*.tar.gz
+*.zip
+
+# OS
+.DS_Store

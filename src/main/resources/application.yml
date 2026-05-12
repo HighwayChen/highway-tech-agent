@@ -1,0 +1,69 @@
+server:
+  port: 8080
+  web:
+    resources:
+      cache:
+        period: 0
+      chain:
+        cache: false
+
+spring:
+  application:
+    name: highway-agent
+  ai:
+    dashscope:
+      api-key: sk-904eac5419504173abd8a962ed1aec93
+      read-timeout: 120000
+      chat:
+        options:
+          model: deepseek-v4-pro
+          temperature: 0.7
+  datasource:
+    url: jdbc:mysql://47.99.202.93:3306/dodo?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
+    username: root
+    password: Chen123150.
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 60000
+      connection-timeout: 30000
+      max-lifetime: 1800000
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+
+tavily:
+  api-key: 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
+  base-url: https://api.tavily.com
+  search-depth: advanced
+  max-results: 5
+
+agent:
+  suggestion:
+    count: 5
+
+deep-research:
+  max-iterations: 3
+  max-sub-questions: 5
+  max-deep-search-rounds: 2
+  max-extract-urls: 3
+  plan-confirmation:
+    enabled: true
+    sub-question-threshold: 3
+    estimated-search-threshold: 8
