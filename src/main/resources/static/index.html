@@ -214,9 +214,16 @@
         .report-panel { display: none; flex: 1; flex-direction: column; min-width: 0; background: #fff; }
         .report-panel.active { display: flex; }
         .report-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid #e8e8ec; background: #fff; flex-shrink: 0; }
+        .report-panel-header .rp-left { display: flex; align-items: center; gap: 12px; }
         .report-panel-header .rp-title { font-size: 15px; font-weight: 600; color: #333; }
         .report-panel-close { background: none; border: none; font-size: 18px; color: #999; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
         .report-panel-close:hover { background: #f0f0f5; color: #333; }
+
+        /* 可视化报告源码/渲染切换 */
+        .visual-toggle { display: none; gap: 2px; background: #f0f0f5; border-radius: 6px; padding: 2px; }
+        .visual-toggle-btn { padding: 4px 12px; border: none; background: transparent; color: #888; font-size: 12px; font-weight: 500; border-radius: 4px; cursor: pointer; transition: all 0.15s; }
+        .visual-toggle-btn.active { background: #fff; color: #333; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+        .visual-toggle-btn:hover { color: #555; }
         .report-panel-content { flex: 1; overflow-y: auto; padding: 24px; }
 
         /* 报告卡片 */
@@ -328,7 +335,13 @@
         <!-- 报告查看面板 -->
         <div class="report-panel" id="reportPanel">
             <div class="report-panel-header">
-                <span class="rp-title" id="reportPanelTitle">报告</span>
+                <div class="rp-left">
+                    <span class="rp-title" id="reportPanelTitle">报告</span>
+                    <div class="visual-toggle" id="visualToggle">
+                        <button class="visual-toggle-btn active" id="btnRenderView" onclick="toggleVisualView('render')">渲染视图</button>
+                        <button class="visual-toggle-btn" id="btnSourceView" onclick="toggleVisualView('source')">源码</button>
+                    </div>
+                </div>
                 <button class="report-panel-close" onclick="closeReportPanel()">&times;</button>
             </div>
             <div class="report-panel-content" id="reportPanelContent"></div>
@@ -394,6 +407,7 @@
         currentReportRefs = null;
         activeReportType = null;
         window._reportStreamBuffer = '';
+        window._visualStreamBuffer = '';
         visualChartInstances.forEach(function(c) { c.dispose(); });
         visualChartInstances = [];
         closeReportPanel();
@@ -645,9 +659,10 @@
     var phaseLabels = {
         analyzing: '分析问题', clarifying: '补充信息', plan_generated: '生成计划', awaiting_confirmation: '确认计划',
         searching: '搜索资料', extracting: '提取内容', deep_searching: '深度搜索', critiquing: '评估充分性',
-        revising_plan: '修订计划', generating_report: '生成报告', complete: '研究完成', progress: '处理中'
+        revising_plan: '修订计划', generating_report: '生成文字报告', generating_visual: '生成可视化报告',
+        complete: '研究完成', progress: '处理中'
     };
-    var phaseOrder = ['analyzing','clarifying','plan_generated','awaiting_confirmation','searching','extracting','deep_searching','critiquing','revising_plan','generating_report','complete'];
+    var phaseOrder = ['analyzing','clarifying','plan_generated','awaiting_confirmation','searching','extracting','deep_searching','critiquing','revising_plan','generating_report','generating_visual','complete'];
 
     function startResearch(message) {
         var div = addAssistantBubble('');
@@ -715,7 +730,7 @@
             } catch(ex) {}
         });
 
-        // 实时报告 token
+        // 实时文字报告 token
         es.addEventListener('report_token', function(e) {
             try {
                 var data = JSON.parse(e.data);
@@ -724,7 +739,27 @@
                 if (streamEl) {
                     window._reportStreamBuffer += token;
                     streamEl.innerHTML = renderMarkdown(window._reportStreamBuffer);
-                    document.getElementById('reportPanelContent').scrollTop = 999999;
+                    var mdView = document.getElementById('mdReportView');
+                    if (mdView && mdView.style.display !== 'none') {
+                        document.getElementById('reportPanelContent').scrollTop = 999999;
+                    }
+                }
+            } catch(ex) {}
+        });
+
+        // 实时可视化报告 token
+        es.addEventListener('visual_token', function(e) {
+            try {
+                var data = JSON.parse(e.data);
+                var token = data.token || '';
+                window._visualStreamBuffer += token;
+                // 如果当前在可视化源码视图，实时更新
+                if (activeReportType === 'visual' && visualViewMode === 'source') {
+                    var sourceEl = document.querySelector('#visualReportView pre');
+                    if (sourceEl) {
+                        sourceEl.textContent = window._visualStreamBuffer;
+                        document.getElementById('reportPanelContent').scrollTop = 999999;
+                    }
                 }
             } catch(ex) {}
         });
@@ -787,7 +822,8 @@
             searching: '搜索与提取',
             critiquing: '评估充分性',
             revising_plan: '修订计划',
-            generating_report: '生成报告',
+            generating_report: '生成文字报告',
+            generating_visual: '生成可视化报告',
             complete: '研究完成'
         };
 
@@ -877,14 +913,14 @@
         } else if (phase === 'generating_report') {
             content.innerHTML = '<div class="phase-detail">正在撰写研究报告...</div>';
 
-            // 立刻展示报告卡片（带加载动画）
+            // 立刻展示报告卡片（文字报告已在右侧面板流式展示，可视化卡片带加载动画）
             answerEl.style.display = 'block';
             answerEl.classList.remove('typing-indicator');
             answerEl.innerHTML =
                 '<div class="report-cards">' +
-                    '<div class="report-card md-card" onclick="openReportPanel(\'md\')">' +
+                    '<div class="report-card md-card" onclick="openReportPanel(\'md\')" style="outline:2px solid #6366f1;">' +
                         '<div class="card-icon">📄</div>' +
-                        '<div class="card-title">文字报告 <span class="card-loading-spinner" id="mdSpinner"></span></div>' +
+                        '<div class="card-title">文字报告</div>' +
                         '<div class="card-desc">查看 Markdown 格式的完整研究报告</div>' +
                     '</div>' +
                     '<div class="report-card visual-card" onclick="openReportPanel(\'visual\')">' +
@@ -900,12 +936,34 @@
             var panel = document.getElementById('reportPanel');
             panel.classList.add('active');
             document.getElementById('reportPanelTitle').textContent = '文字报告';
+            // 双容器：文字报告和可视化报告共存，切换只隐藏/显示
             document.getElementById('reportPanelContent').innerHTML =
-                '<div class="markdown-body research-report" id="streamingReport" style="max-width:760px;margin:0 auto;"></div>';
+                '<div id="mdReportView" style="display:block;">' +
+                    '<div class="markdown-body research-report" id="streamingReport" style="max-width:760px;margin:0 auto;"></div>' +
+                    '<div id="mdReportRefs"></div>' +
+                '</div>' +
+                '<div id="visualReportView" style="display:none;"></div>';
             window._reportStreamBuffer = '';
             activeReportType = 'md';
 
             scrollBottom();
+        } else if (phase === 'generating_visual') {
+            content.innerHTML = '<div class="phase-detail">正在生成可视化数据...</div>';
+
+            window._visualStreamBuffer = '';
+            // 显示切换按钮（可视化报告阶段开始即可用）
+            var toggleEl = document.getElementById('visualToggle');
+            if (toggleEl) toggleEl.style.display = 'flex';
+            // 如果当前在可视化源码视图，显示流式输出
+            if (activeReportType === 'visual' && visualViewMode === 'source') {
+                var visualView = document.getElementById('visualReportView');
+                if (visualView) {
+                    visualView.innerHTML =
+                        '<div style="max-width:900px;margin:0 auto;">' +
+                            '<pre style="background:#1e1e1e;color:#d4d4d4;padding:16px;border-radius:10px;font-size:13px;line-height:1.6;overflow-x:auto;white-space:pre-wrap;word-break:break-word;"></pre>' +
+                        '</div>';
+                }
+            }
         } else if (phase === 'complete') {
             icon.className = 'phase-icon done';
             icon.innerHTML = '✓';
@@ -916,30 +974,32 @@
             currentReportVisual = data.visualData || null;
             currentReportRefs = data.references || [];
             window._reportStreamBuffer = '';
+            window._visualStreamBuffer = '';
 
             content.innerHTML = '<div class="phase-detail">研究报告已生成</div>';
 
             // 停掉卡片加载动画
-            var mdSpinner = document.getElementById('mdSpinner');
             var visualSpinner = document.getElementById('visualSpinner');
-            if (mdSpinner) mdSpinner.classList.add('hidden');
             if (visualSpinner) visualSpinner.classList.add('hidden');
 
             // 更新右侧面板为最终完整内容
-            var reportContentEl = document.querySelector('#reportPanelContent .research-report');
+            var reportContentEl = document.querySelector('#mdReportView .research-report');
             if (reportContentEl) {
                 reportContentEl.removeAttribute('id');
                 reportContentEl.innerHTML = renderMarkdown(currentReportMd);
             }
 
-            // 右侧面板追加参考文献
+            // 文字报告容器追加参考文献
             if (currentReportRefs && currentReportRefs.length) {
-                var refsHtml = '<div class="references" style="margin-top:20px;"><h4>参考来源</h4>';
-                currentReportRefs.forEach(function(r) {
-                    refsHtml += '<div class="reference-item">[' + r.id + '] <a href="' + r.url + '" target="_blank">' + escapeHtml(r.title) + '</a></div>';
-                });
-                refsHtml += '</div>';
-                document.getElementById('reportPanelContent').insertAdjacentHTML('beforeend', refsHtml);
+                var refsEl = document.getElementById('mdReportRefs');
+                if (refsEl) {
+                    var refsHtml = '<div class="references" style="margin-top:20px;"><h4>参考来源</h4>';
+                    currentReportRefs.forEach(function(r) {
+                        refsHtml += '<div class="reference-item">[' + r.id + '] <a href="' + r.url + '" target="_blank">' + escapeHtml(r.title) + '</a></div>';
+                    });
+                    refsHtml += '</div>';
+                    refsEl.innerHTML = refsHtml;
+                }
             }
 
             // 聊天区参考文献
@@ -1107,7 +1167,20 @@
                                     if (streamEl) {
                                         window._reportStreamBuffer += token;
                                         streamEl.innerHTML = renderMarkdown(window._reportStreamBuffer);
-                                        document.getElementById('reportPanelContent').scrollTop = 999999;
+                                        var mdView = document.getElementById('mdReportView');
+                                        if (mdView && mdView.style.display !== 'none') {
+                                            document.getElementById('reportPanelContent').scrollTop = 999999;
+                                        }
+                                    }
+                                } else if (currentEvent === 'visual_token') {
+                                    var token = data.token || '';
+                                    window._visualStreamBuffer += token;
+                                    if (activeReportType === 'visual' && visualViewMode === 'source') {
+                                        var sourceEl = document.querySelector('#visualReportView pre');
+                                        if (sourceEl) {
+                                            sourceEl.textContent = window._visualStreamBuffer;
+                                            document.getElementById('reportPanelContent').scrollTop = 999999;
+                                        }
                                     }
                                 } else if (currentEvent === 'done') {
                                     progressEl.style.display = 'none';
@@ -1154,32 +1227,34 @@
     function askSuggested(el) { document.getElementById('mainChatInput').value = el.textContent; sendFromMain(); }
 
     // ========== 报告面板 ==========
+    var visualViewMode = 'render'; // 'render' | 'source'
+
     function openReportPanel(type) {
         activeReportType = type;
         var mainEl = document.querySelector('.main');
         mainEl.classList.add('split-active');
         var panel = document.getElementById('reportPanel');
         panel.classList.add('active');
+        var toggleEl = document.getElementById('visualToggle');
+
+        var mdView = document.getElementById('mdReportView');
+        var visualView = document.getElementById('visualReportView');
 
         if (type === 'md') {
             document.getElementById('reportPanelTitle').textContent = '文字报告';
-            var content = document.getElementById('reportPanelContent');
-            var html = '<div class="markdown-body" style="max-width:760px;margin:0 auto;">';
-            if (currentReportMd) {
-                html += '<div class="research-report">' + renderMarkdown(currentReportMd) + '</div>';
-            }
-            if (currentReportRefs && currentReportRefs.length) {
-                html += '<div class="references" style="margin-top:20px;"><h4>参考来源</h4>';
-                currentReportRefs.forEach(function(r) {
-                    html += '<div class="reference-item">[' + r.id + '] <a href="' + r.url + '" target="_blank">' + escapeHtml(r.title) + '</a></div>';
-                });
-                html += '</div>';
-            }
-            html += '</div>';
-            content.innerHTML = html;
+            if (toggleEl) toggleEl.style.display = 'none';
+            if (visualView) visualView.style.display = 'none';
+            if (mdView) mdView.style.display = 'block';
         } else if (type === 'visual') {
             document.getElementById('reportPanelTitle').textContent = '可视化报告';
-            renderVisualDashboard();
+            if (toggleEl) toggleEl.style.display = 'flex';
+            if (mdView) mdView.style.display = 'none';
+            if (visualView) {
+                visualView.style.display = 'block';
+                visualViewMode = 'render';
+                updateVisualToggleBtns();
+                renderVisualDashboard();
+            }
         }
 
         // 高亮当前选中的卡片
@@ -1188,25 +1263,55 @@
         if (activeCard) activeCard.style.outline = '2px solid #6366f1';
     }
 
+    function toggleVisualView(mode) {
+        visualViewMode = mode;
+        updateVisualToggleBtns();
+
+        var visualView = document.getElementById('visualReportView');
+        if (!visualView) return;
+
+        if (mode === 'source') {
+            var sourceJson = currentReportVisual ? JSON.stringify(currentReportVisual, null, 2) : (window._visualStreamBuffer || '');
+            visualView.innerHTML =
+                '<div style="max-width:900px;margin:0 auto;">' +
+                    '<pre style="background:#1e1e1e;color:#d4d4d4;padding:16px;border-radius:10px;font-size:13px;line-height:1.6;overflow-x:auto;white-space:pre-wrap;word-break:break-word;">' + escapeHtml(sourceJson) + '</pre>' +
+                '</div>';
+        } else {
+            renderVisualDashboard();
+        }
+    }
+
+    function updateVisualToggleBtns() {
+        var btnRender = document.getElementById('btnRenderView');
+        var btnSource = document.getElementById('btnSourceView');
+        if (btnRender) btnRender.classList.toggle('active', visualViewMode === 'render');
+        if (btnSource) btnSource.classList.toggle('active', visualViewMode === 'source');
+    }
+
     function closeReportPanel() {
         activeReportType = null;
         var mainEl = document.querySelector('.main');
         mainEl.classList.remove('split-active');
         var panel = document.getElementById('reportPanel');
         panel.classList.remove('active');
+        var toggleEl = document.getElementById('visualToggle');
+        if (toggleEl) toggleEl.style.display = 'none';
         document.querySelectorAll('.report-card').forEach(function(c) { c.style.outline = 'none'; });
     }
 
     function renderVisualDashboard() {
+        // 如果当前是源码视图，不覆盖
+        if (visualViewMode === 'source') return;
+
         // 清理旧的 ECharts 实例
         visualChartInstances.forEach(function(c) { c.dispose(); });
         visualChartInstances = [];
 
         var data = currentReportVisual;
-        var content = document.getElementById('reportPanelContent');
+        var container = document.getElementById('visualReportView') || document.getElementById('reportPanelContent');
 
         if (!data || (!data.keyFindings && !data.statistics && !data.charts)) {
-            content.innerHTML = '<div style="text-align:center;padding:60px;color:#aaa;">可视化数据生成失败，请查看文字报告</div>';
+            container.innerHTML = '<div style="text-align:center;padding:60px;color:#aaa;">可视化数据生成失败，请查看文字报告</div>';
             return;
         }
 
@@ -1275,7 +1380,7 @@
         }
 
         html += '</div>';
-        content.innerHTML = html;
+        container.innerHTML = html;
 
         // DOM 渲染后初始化 ECharts
         if (data.charts && data.charts.length > 0) {

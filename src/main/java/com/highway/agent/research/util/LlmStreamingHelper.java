@@ -20,11 +20,17 @@ public class LlmStreamingHelper {
     /** 全局 token 消费者（volatile 保证跨线程可见性） */
     private static volatile Consumer<String> tokenConsumer;
 
-    /** 全局报告 token 消费者（volatile 保证跨线程可见性） */
+    /** 全局文字报告 token 消费者 */
     private static volatile Consumer<String> reportTokenConsumer;
 
-    /** 报告生成前置回调，用于在 reporter 节点开始时通知前端 */
+    /** 全局可视化报告 token 消费者 */
+    private static volatile Consumer<String> visualTokenConsumer;
+
+    /** 文字报告生成前置回调 */
     private static volatile Runnable onGeneratingReport;
+
+    /** 可视化报告生成前置回调 */
+    private static volatile Runnable onGeneratingVisual;
 
     private LlmStreamingHelper() {}
 
@@ -44,6 +50,14 @@ public class LlmStreamingHelper {
         reportTokenConsumer = null;
     }
 
+    public static void setVisualTokenConsumer(Consumer<String> consumer) {
+        visualTokenConsumer = consumer;
+    }
+
+    public static void clearVisualTokenConsumer() {
+        visualTokenConsumer = null;
+    }
+
     public static void setOnGeneratingReport(Runnable callback) {
         onGeneratingReport = callback;
     }
@@ -52,10 +66,25 @@ public class LlmStreamingHelper {
         onGeneratingReport = null;
     }
 
+    public static void setOnGeneratingVisual(Runnable callback) {
+        onGeneratingVisual = callback;
+    }
+
+    public static void clearOnGeneratingVisual() {
+        onGeneratingVisual = null;
+    }
+
     /** 由 ReporterNode 调用，触发 generating_report 事件通知前端 */
     public static void notifyGeneratingReport() {
         if (onGeneratingReport != null) {
             try { onGeneratingReport.run(); } catch (Exception ignored) {}
+        }
+    }
+
+    /** 由 ReporterNode 调用，触发 generating_visual 事件通知前端 */
+    public static void notifyGeneratingVisual() {
+        if (onGeneratingVisual != null) {
+            try { onGeneratingVisual.run(); } catch (Exception ignored) {}
         }
     }
 
@@ -101,9 +130,7 @@ public class LlmStreamingHelper {
     }
 
     /**
-     * 流式调用 LLM 生成报告，每个 token 同时推送到 reportTokenConsumer。
-     * 不同于 streamCall，此方法会将 token 推送到专用的报告消费者，
-     * 而非推理消费者（reasoning），避免两类内容混淆。
+     * 流式调用 LLM 生成文字报告，每个 token 推送到 reportTokenConsumer。
      */
     public static String streamReportCall(ChatClient chatClient, String userPrompt) {
         Consumer<String> reportConsumer = reportTokenConsumer;
@@ -133,6 +160,43 @@ public class LlmStreamingHelper {
             return result != null ? result : "";
         } catch (Exception e) {
             log.error("Report streaming call failed for prompt (first 50 chars): {}",
+                    userPrompt.substring(0, Math.min(50, userPrompt.length())), e);
+            return "";
+        }
+    }
+
+    /**
+     * 流式调用 LLM 生成可视化报告，每个 token 推送到 visualTokenConsumer。
+     * 与 streamReportCall 独立，不会污染文字报告流。
+     */
+    public static String streamVisualCall(ChatClient chatClient, String userPrompt) {
+        Consumer<String> visualConsumer = visualTokenConsumer;
+        Consumer<String> reasoningConsumer = tokenConsumer;
+        try {
+            Flux<String> contentFlux = chatClient.prompt()
+                    .user(userPrompt)
+                    .stream()
+                    .content();
+
+            if (visualConsumer != null || reasoningConsumer != null) {
+                contentFlux = contentFlux.doOnNext(chunk -> {
+                    try { if (visualConsumer != null) visualConsumer.accept(chunk); } catch (Exception ignored) {}
+                    try { if (reasoningConsumer != null) reasoningConsumer.accept(chunk); } catch (Exception ignored) {}
+                });
+            }
+
+            String result = contentFlux
+                    .collectList()
+                    .map(chunks -> String.join("", chunks))
+                    .block(DEFAULT_TIMEOUT);
+
+            if (result == null) {
+                log.warn("Visual streaming call returned null for prompt (first 50 chars): {}",
+                        userPrompt.substring(0, Math.min(50, userPrompt.length())));
+            }
+            return result != null ? result : "";
+        } catch (Exception e) {
+            log.error("Visual streaming call failed for prompt (first 50 chars): {}",
                     userPrompt.substring(0, Math.min(50, userPrompt.length())), e);
             return "";
         }

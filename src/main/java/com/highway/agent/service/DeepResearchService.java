@@ -79,10 +79,24 @@ public class DeepResearchService {
             } catch (Exception ignored) {}
         };
 
+        // 注册可视化报告 token 消费者，推送 visual_token 事件到前端
+        Consumer<String> visualTokenConsumer = token -> {
+            try {
+                reasoningSink.tryEmitNext(toSse(SseEvent.visualToken(token)));
+            } catch (Exception ignored) {}
+        };
+
         // 注册报告生成前置回调，在 reporter 节点开始时推送 generating_report 事件
         Runnable onGeneratingReport = () -> {
             try {
                 reasoningSink.tryEmitNext(toSse(SseEvent.generatingReport(Map.of())));
+            } catch (Exception ignored) {}
+        };
+
+        // 注册可视化报告生成前置回调
+        Runnable onGeneratingVisual = () -> {
+            try {
+                reasoningSink.tryEmitNext(toSse(SseEvent.generatingVisual(Map.of())));
             } catch (Exception ignored) {}
         };
 
@@ -92,13 +106,17 @@ public class DeepResearchService {
                 .doOnSubscribe(s -> {
                     LlmStreamingHelper.setTokenConsumer(tokenConsumer);
                     LlmStreamingHelper.setReportTokenConsumer(reportTokenConsumer);
+                    LlmStreamingHelper.setVisualTokenConsumer(visualTokenConsumer);
                     LlmStreamingHelper.setOnGeneratingReport(onGeneratingReport);
+                    LlmStreamingHelper.setOnGeneratingVisual(onGeneratingVisual);
                 })
                 .map(this::nodeOutputToSse)
                 .doFinally(signal -> {
                     LlmStreamingHelper.clearTokenConsumer();
                     LlmStreamingHelper.clearReportTokenConsumer();
+                    LlmStreamingHelper.clearVisualTokenConsumer();
                     LlmStreamingHelper.clearOnGeneratingReport();
+                    LlmStreamingHelper.clearOnGeneratingVisual();
                     reasoningSink.tryEmitComplete();
                 });
 
@@ -134,9 +152,21 @@ public class DeepResearchService {
             } catch (Exception ignored) {}
         };
 
+        Consumer<String> visualTokenConsumer = token -> {
+            try {
+                reasoningSink.tryEmitNext(toSse(SseEvent.visualToken(token)));
+            } catch (Exception ignored) {}
+        };
+
         Runnable onGeneratingReport = () -> {
             try {
                 reasoningSink.tryEmitNext(toSse(SseEvent.generatingReport(Map.of())));
+            } catch (Exception ignored) {}
+        };
+
+        Runnable onGeneratingVisual = () -> {
+            try {
+                reasoningSink.tryEmitNext(toSse(SseEvent.generatingVisual(Map.of())));
             } catch (Exception ignored) {}
         };
 
@@ -155,13 +185,17 @@ public class DeepResearchService {
                             .doOnSubscribe(s -> {
                                 LlmStreamingHelper.setTokenConsumer(tokenConsumer);
                                 LlmStreamingHelper.setReportTokenConsumer(reportTokenConsumer);
+                                LlmStreamingHelper.setVisualTokenConsumer(visualTokenConsumer);
                                 LlmStreamingHelper.setOnGeneratingReport(onGeneratingReport);
+                                LlmStreamingHelper.setOnGeneratingVisual(onGeneratingVisual);
                             })
                             .map(this::nodeOutputToSse)
                             .doFinally(signal -> {
                                 LlmStreamingHelper.clearTokenConsumer();
                                 LlmStreamingHelper.clearReportTokenConsumer();
+                                LlmStreamingHelper.clearVisualTokenConsumer();
                                 LlmStreamingHelper.clearOnGeneratingReport();
+                                LlmStreamingHelper.clearOnGeneratingVisual();
                                 reasoningSink.tryEmitComplete();
                             });
 

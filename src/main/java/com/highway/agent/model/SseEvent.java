@@ -69,12 +69,20 @@ public class SseEvent {
         return SseEvent.builder().type("generating_report").data(data).build();
     }
 
+    public static SseEvent generatingVisual(Object data) {
+        return SseEvent.builder().type("generating_visual").data(data).build();
+    }
+
     public static SseEvent reasoningToken(String node, String token) {
         return SseEvent.builder().type("reasoning").data(Map.of("node", node, "token", token)).build();
     }
 
     public static SseEvent reportToken(String token) {
         return SseEvent.builder().type("report_token").data(Map.of("token", token)).build();
+    }
+
+    public static SseEvent visualToken(String token) {
+        return SseEvent.builder().type("visual_token").data(Map.of("token", token)).build();
     }
 
     public static SseEvent complete(Object data) {

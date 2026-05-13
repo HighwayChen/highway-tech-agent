@@ -61,6 +61,7 @@ public class ReporterNode implements NodeAction {
         log.info("Report generated, length={}, references={}", report != null ? report.length() : 0, refList.size());
 
         // 生成可视化报告数据
+        LlmStreamingHelper.notifyGeneratingVisual();
         VisualReportData visualData = generateVisualData(originalQuestion, planSummary, extractedContents, references);
 
         Map<String, Object> result = new HashMap<>();
@@ -175,7 +176,7 @@ public class ReporterNode implements NodeAction {
     private VisualReportData generateVisualData(String originalQuestion, String planSummary,
                                                  String extractedContents, String references) {
         try {
-            String llmResponse = LlmStreamingHelper.streamReportCall(chatClient,
+            String llmResponse = LlmStreamingHelper.streamVisualCall(chatClient,
                     promptTemplate.visualReporterPrompt(originalQuestion, planSummary, extractedContents, references));
 
             String json = extractJson(llmResponse);
