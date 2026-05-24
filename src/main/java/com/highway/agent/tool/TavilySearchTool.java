@@ -24,6 +24,7 @@ public class TavilySearchTool {
     private final String apiKey;
     private final String searchDepth;
     private final int maxResults;
+    private final String timeRange;
 
     /** 累积的搜索结果，线程安全 */
     private final List<SearchResult> accumulatedResults = new CopyOnWriteArrayList<>();
@@ -32,12 +33,14 @@ public class TavilySearchTool {
                             ObjectMapper objectMapper,
                             @Value("${tavily.api-key}") String apiKey,
                             @Value("${tavily.search-depth:advanced}") String searchDepth,
-                            @Value("${tavily.max-results:5}") int maxResults) {
+                            @Value("${tavily.max-results:5}") int maxResults,
+                            @Value("${tavily.time-range:month}") String timeRange) {
         this.webClient = tavilyWebClient;
         this.objectMapper = objectMapper;
         this.apiKey = apiKey;
         this.searchDepth = searchDepth;
         this.maxResults = maxResults;
+        this.timeRange = timeRange;
     }
 
     /**
@@ -65,12 +68,14 @@ public class TavilySearchTool {
     public record SearchRequest(String query) {}
 
     public Mono<List<SearchResult>> searchReactive(String query) {
-        Map<String, Object> requestBody = Map.of(
-                "query", query,
-                "search_depth", searchDepth,
-                "max_results", maxResults,
-                "include_answer", false
-        );
+        Map<String, Object> requestBody = new java.util.HashMap<>();
+        requestBody.put("query", query);
+        requestBody.put("search_depth", searchDepth);
+        requestBody.put("max_results", maxResults);
+        requestBody.put("include_answer", false);
+        if (timeRange != null && !timeRange.isBlank()) {
+            requestBody.put("time_range", timeRange);
+        }
 
         return webClient.post()
                 .uri("/search")

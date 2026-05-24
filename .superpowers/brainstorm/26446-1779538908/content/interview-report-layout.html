@@ -1,0 +1,87 @@
+<h2>面试报告页布局：评分结果怎样呈现最有价值？</h2>
+<p class="subtitle">报告包含：总评等级、每轮评价、题目级反馈、改进建议、Markdown/HTML 报告文件。点击你倾向的布局。</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">A. 总览优先 + 轮次详情</div>
+        <div class="mockup-body">
+          <div class="mock-nav">面试报告 / 总评 GOOD / 2026-05-23</div>
+          <div class="mock-content">
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+              <div class="placeholder">总体等级<br><strong>GOOD</strong></div>
+              <div class="placeholder">优势<br>Spring / 项目表达</div>
+              <div class="placeholder">待提升<br>JVM / 并发细节</div>
+            </div>
+            <div class="placeholder" style="margin-top:10px;">改进建议：按优先级列出 3-5 条</div>
+            <div class="placeholder">第1轮 Java基础：PASS / 展开题目反馈</div>
+            <div class="placeholder">第2轮 Spring生态：GOOD / 展开题目反馈</div>
+            <button class="mock-button">查看完整 HTML 报告</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. 总览优先型</h3>
+      <p>先给用户结论和改进方向，再展开每轮细节。最符合练习反馈场景。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">B. 原始报告阅读型</div>
+        <div class="mockup-body">
+          <div class="mock-nav">报告文件预览 | 下载 Markdown | 下载 HTML</div>
+          <div class="mock-content">
+            <div class="placeholder" style="min-height:220px;">完整 HTML/Markdown 报告正文渲染区<br><br># 总体评价<br>## 每轮评价<br>## 改进建议</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. 文档阅读型</h3>
+      <p>实现简单，和 MinIO 报告文件天然匹配；但缺少产品化摘要和交互层次。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">C. 对比复盘型</div>
+        <div class="mockup-body">
+          <div style="display:flex; gap:12px;">
+            <div class="mock-sidebar" style="width:170px;">题目列表<br>Q1 PASS<br>Q2 GOOD<br>Q3 FAIL</div>
+            <div class="mock-content" style="flex:1;">
+              <div class="placeholder">左：你的回答</div>
+              <div class="placeholder">右：评分要点与反馈</div>
+              <div class="placeholder">改写建议 / 示例回答方向</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. 题目复盘型</h3>
+      <p>学习价值最高，逐题对照用户答案和评分点；但 MVP 实现更重，报告页信息密度高。</p>
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <h4>我的建议</h4>
+    <ul>
+      <li>MVP 选 A，并在每轮详情中支持展开到题目级反馈。</li>
+      <li>保留“查看完整报告”入口，直接打开 MinIO HTML 内容或后端代理内容。</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>后续增强</h4>
+    <ul>
+      <li>C 可以作为二期“深度复盘”模式，不阻塞 MVP。</li>
+      <li>B 可作为 A 的兜底：如果结构化评价缺失，仍能展示报告正文。</li>
+    </ul>
+  </div>
+</div>

@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 9999
   web:
     resources:
       cache:
@@ -33,6 +33,8 @@ spring:
     init:
       mode: always
       schema-locations: classpath:schema.sql
+      separator: ;
+      continue-on-error: true
   servlet:
     multipart:
       enabled: true
@@ -49,21 +51,18 @@ mybatis-plus:
       id-type: auto
 
 tavily:
-  api-key: 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
+  api-key: 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
   base-url: https://api.tavily.com
   search-depth: advanced
   max-results: 5
+  time-range: month
 
 agent:
   suggestion:
     count: 5
 
-deep-research:
-  max-iterations: 3
-  max-sub-questions: 5
-  max-deep-search-rounds: 2
-  max-extract-urls: 3
-  plan-confirmation:
-    enabled: true
-    sub-question-threshold: 3
-    estimated-search-threshold: 8
+minio:
+  endpoint: http://47.99.202.93:9000
+  access-key: minioadmin
+  secret-key: minioadmin
+  bucket: highway-research

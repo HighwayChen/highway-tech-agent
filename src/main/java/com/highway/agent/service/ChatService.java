@@ -67,11 +67,13 @@ public class ChatService {
     /**
      * 流式对话，返回 SSE 事件流
      */
-    public Flux<ServerSentEvent<String>> chatStream(String conversationId, String userMessage) {
+    public Flux<ServerSentEvent<String>> chatStream(String conversationId, String userMessage, boolean skipSaveUser) {
         String convId = (conversationId == null || conversationId.isBlank())
                 ? UUID.randomUUID().toString() : conversationId;
 
-        chatMemoryRepository.saveAll(convId, List.of(new UserMessage(userMessage)));
+        if (!skipSaveUser) {
+            chatMemoryRepository.saveAll(convId, List.of(new UserMessage(userMessage)));
+        }
 
         // 加载历史对话，拼上当前消息一起传给 Agent
         List<Message> history = chatMemoryRepository.findByConversationId(convId);

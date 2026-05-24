@@ -1,7 +1,6 @@
 package com.highway.agent.service;
 
 import com.highway.agent.prompt.PromptTemplate;
-import com.highway.agent.research.util.LlmStreamingHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -22,8 +21,7 @@ public class SuggestionService {
         String prompt = promptTemplate.getSuggestionPrompt(count, userMessage, assistantAnswer);
 
         try {
-            String response = LlmStreamingHelper.streamCall(chatClient, prompt);
-
+            String response = chatClient.prompt(prompt).call().content();
             return parseSuggestions(response);
         } catch (Exception e) {
             log.error("Failed to generate suggestions", e);

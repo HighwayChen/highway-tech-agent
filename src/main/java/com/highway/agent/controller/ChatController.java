@@ -31,8 +31,9 @@ public class ChatController {
     @GetMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> chatStream(
             @RequestParam(required = false) String conversationId,
-            @RequestParam String message) {
-        return chatService.chatStream(conversationId, message);
+            @RequestParam String message,
+            @RequestParam(required = false, defaultValue = "false") boolean skipSaveUser) {
+        return chatService.chatStream(conversationId, message, skipSaveUser);
     }
 
     @PostMapping("/chat/stop")

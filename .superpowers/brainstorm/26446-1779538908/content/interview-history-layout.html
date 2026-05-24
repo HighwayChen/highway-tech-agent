@@ -1,0 +1,87 @@
+<h2>面试历史与入口：单页里怎么组织简历和历史会话？</h2>
+<p class="subtitle">前提：仍然是一个 interview.html，用户从简历管理进入面试，也可以回看历史报告。</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">A. 简历卡片内嵌历史面试</div>
+        <div class="mockup-body">
+          <div class="mock-nav">高速公路技术面试 | 上传简历 | 刷新</div>
+          <div class="mock-content">
+            <div class="placeholder">
+              张三_Java开发.pdf · 已评估<br>
+              [查看简历报告] [开始新面试]<br>
+              最近面试：GOOD · 2026-05-23 [继续/查看报告]<br>
+              历史面试：3 次 ▾
+            </div>
+            <div class="placeholder">
+              李四_后端开发.docx · 分析中<br>
+              [查看状态]
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. 简历聚合型</h3>
+      <p>以简历为主线，每张简历下展示最近面试和历史入口。最符合“同一简历可多次面试”。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">B. 顶部 Tab：简历 / 面试历史</div>
+        <div class="mockup-body">
+          <div class="mock-nav">[简历管理] [面试历史]</div>
+          <div class="mock-content">
+            <div class="placeholder">Tab 1：简历列表 + 上传 + 分析 + 开始面试</div>
+            <div class="placeholder">Tab 2：所有面试会话列表 + 状态 + 报告入口</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. Tab 分区型</h3>
+      <p>信息边界清晰，列表实现简单；但用户需要在两个列表之间切换，简历和面试关联感弱一点。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">C. 时间线型历史</div>
+        <div class="mockup-body">
+          <div class="mock-nav">所有动态</div>
+          <div class="mock-content">
+            <div class="placeholder">今天 14:00 完成面试 GOOD · 张三简历</div>
+            <div class="placeholder">今天 13:20 生成题目 READY · 张三简历</div>
+            <div class="placeholder">昨天 18:00 简历分析完成 · 李四简历</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. 时间线型</h3>
+      <p>适合展示状态变化和操作记录；但 MVP 管理成本更高，不如卡片直观。</p>
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <h4>我的建议</h4>
+    <ul>
+      <li>选 A：简历是面试的根对象，历史会话自然归属于简历。</li>
+      <li>卡片主按钮按状态变化：分析简历 / 分析中 / 开始面试 / 查看报告。</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>实现边界</h4>
+    <ul>
+      <li>MVP 每张简历只展示最近 3 次面试，更多用“查看全部”展开。</li>
+      <li>列表接口可以先不分页，后端预留 limit 参数即可。</li>
+    </ul>
+  </div>
+</div>

@@ -1,0 +1,87 @@
+<h2>面试系统前端页面结构：选哪种更适合 MVP？</h2>
+<p class="subtitle">重点比较：用户是否容易理解流程、实现复杂度、后续扩展性。点击你倾向的方案，也可以直接在终端说想法。</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">A. 单页流程型 interview.html</div>
+        <div class="mockup-body">
+          <div class="mock-nav">高速公路技术面试 | 简历 → 面试 → 报告</div>
+          <div style="display:flex; gap:12px; margin-top:12px;">
+            <div class="mock-sidebar" style="width:160px;">简历列表<br>面试历史</div>
+            <div class="mock-content" style="flex:1;">
+              <div class="placeholder">当前步骤内容区域</div>
+              <button class="mock-button">下一步</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. 单页流程型</h3>
+      <p>一个 interview.html 内按状态切换：简历管理、答题、报告。实现最快，适合 MVP，但页面 JS 会变长。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">B. 三页分工型</div>
+        <div class="mockup-body">
+          <div class="mock-nav">interview.html | interview-session.html | interview-report.html</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:12px;">
+            <div class="placeholder">简历管理<br>历史入口</div>
+            <div class="placeholder">答题页<br>轮次题目</div>
+            <div class="placeholder">报告页<br>评分建议</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. 三页分工型</h3>
+      <p>每个页面职责清晰，答题页和报告页更好维护；但违背当前“单文件 static/index.html 不拆分”的倾向，需要确认是否允许新增页面。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">C. 控制台型工作台</div>
+        <div class="mockup-body">
+          <div style="display:flex; gap:12px;">
+            <div class="mock-sidebar" style="width:180px;">简历<br>面试会话<br>报告</div>
+            <div class="mock-content" style="flex:1;">
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div class="placeholder">简历状态卡</div>
+                <div class="placeholder">最近面试卡</div>
+              </div>
+              <div class="placeholder" style="margin-top:10px;">详情抽屉 / 主工作区</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. 控制台型工作台</h3>
+      <p>像后台系统一样统一管理简历、会话、报告，扩展性最好；但对练习面试用户来说流程感较弱，MVP 实现也更重。</p>
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <h4>我的建议</h4>
+    <ul>
+      <li>优先选 A：符合“练习面试”的线性流程，最容易快速落地。</li>
+      <li>保留 URL 参数 sessionId/resumeId，让单页也能直接打开答题或报告状态。</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>主要取舍</h4>
+    <ul>
+      <li>A 的单文件 JS 需要控制模块边界，否则后期会变难维护。</li>
+      <li>B 更清晰，但要突破当前静态前端单文件约束。</li>
+    </ul>
+  </div>
+</div>

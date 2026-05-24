@@ -1,0 +1,95 @@
+<h2>答题页布局：用户看到 3-4 轮题目时，哪种最舒服？</h2>
+<p class="subtitle">前提：题目一次生成，用户全部作答后统一提交评分。点击你倾向的布局。</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">A. 左侧轮次导航 + 右侧当前轮次答题</div>
+        <div class="mockup-body">
+          <div class="mock-nav">高速公路技术面试 / 张三_Java简历 / 剩余未答：5</div>
+          <div style="display:flex; gap:12px; margin-top:12px;">
+            <div class="mock-sidebar" style="width:170px;">
+              第1轮 Java基础 ✓<br>
+              第2轮 Spring生态 ●<br>
+              第3轮 项目追问<br>
+              第4轮 工程素养
+            </div>
+            <div class="mock-content" style="flex:1;">
+              <div class="label">第2轮 · Spring生态 · 中等</div>
+              <div class="placeholder">Q1. Spring Boot 自动配置原理是什么？<br><input class="mock-input" placeholder="输入你的回答..."></div>
+              <div class="placeholder">Q2. 你项目里如何处理事务边界？<br><input class="mock-input" placeholder="输入你的回答..."></div>
+              <button class="mock-button">保存草稿</button> <button class="mock-button">提交全部答案</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. 轮次导航型</h3>
+      <p>一次只聚焦一轮，左侧显示进度和未答状态。适合 3-4 轮结构，信息不拥挤。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">B. 全部轮次纵向展开</div>
+        <div class="mockup-body">
+          <div class="mock-nav">答题进度 7/10 | 提交前可修改</div>
+          <div class="mock-content">
+            <div class="placeholder">第1轮 Java基础<br>Q1 + 答案框<br>Q2 + 答案框</div>
+            <div class="placeholder">第2轮 Spring生态<br>Q1 + 答案框<br>Q2 + 答案框</div>
+            <div class="placeholder">第3轮 项目追问<br>Q1 + 答案框...</div>
+            <button class="mock-button">提交全部答案</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. 全部展开型</h3>
+      <p>用户能一眼看到所有题目，适合快速浏览；但题目多时页面很长，容易有压迫感。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">C. 向导式逐题答题</div>
+        <div class="mockup-body">
+          <div class="mock-nav">第 4 / 10 题 · 第2轮 Spring生态</div>
+          <div class="mock-content">
+            <div class="placeholder" style="min-height:130px;">当前题目：Spring Boot 自动配置原理是什么？</div>
+            <input class="mock-input" placeholder="输入你的回答...">
+            <div style="margin-top:12px;">
+              <button class="mock-button">上一题</button>
+              <button class="mock-button">下一题</button>
+              <button class="mock-button">提交全部</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. 逐题向导型</h3>
+      <p>最聚焦，适合移动端；但用户难以整体规划回答，和“按轮次评价”的心智弱一些。</p>
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <h4>我的建议</h4>
+    <ul>
+      <li>选 A：既保留轮次结构，又避免全量题目造成页面过长。</li>
+      <li>左侧轮次显示完成数、状态；右侧当前轮次内所有题目答案框。</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>提交规则建议</h4>
+    <ul>
+      <li>允许保存本地草稿或服务端草稿，但评分只在“提交全部答案”后触发。</li>
+      <li>提交前弹确认，列出未答题目数量。</li>
+    </ul>
+  </div>
+</div>

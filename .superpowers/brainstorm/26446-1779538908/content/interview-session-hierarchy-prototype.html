@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>面试系统层级原型</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f4f6fb; color: #1f2937; }
+    .top { height: 64px; background: linear-gradient(135deg,#111827,#1e3a8a); color:#fff; display:flex; align-items:center; justify-content:space-between; padding:0 28px; }
+    .brand { font-size:20px; font-weight:800; }
+    .crumb { color:#dbeafe; font-size:14px; }
+    .wrap { max-width:1180px; margin:0 auto; padding:28px; }
+    .view { display:none; }
+    .view.active { display:block; }
+    .title { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px; }
+    h1 { margin:0; font-size:28px; }
+    h2 { margin:0 0 12px; font-size:20px; }
+    .sub { color:#6b7280; margin-top:6px; font-size:14px; }
+    .card { background:#fff; border:1px solid #e5e7eb; border-radius:18px; padding:20px; margin-bottom:16px; box-shadow:0 8px 24px rgba(15,23,42,.05); }
+    .upload { border:2px dashed #93c5fd; background:#eff6ff; color:#1d4ed8; padding:30px; border-radius:18px; text-align:center; font-weight:700; margin-bottom:18px; }
+    .resume { display:grid; grid-template-columns:1fr 190px; gap:18px; }
+    .name { font-size:18px; font-weight:800; margin-bottom:8px; }
+    .muted { color:#6b7280; font-size:13px; }
+    .tag { display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:800; margin-left:6px; }
+    .green { background:#dcfce7; color:#166534; }
+    .blue { background:#dbeafe; color:#1d4ed8; }
+    .yellow { background:#fef3c7; color:#92400e; }
+    .gray { background:#f3f4f6; color:#4b5563; }
+    button { border:0; border-radius:10px; padding:10px 14px; cursor:pointer; font-weight:800; }
+    .primary { background:#2563eb; color:#fff; }
+    .secondary { background:#eef2ff; color:#3730a3; }
+    .ghost { background:#f9fafb; color:#374151; border:1px solid #e5e7eb; }
+    .actions { display:flex; flex-direction:column; gap:10px; }
+    .sessions { margin-top:16px; border-top:1px solid #f3f4f6; padding-top:14px; }
+    .session { display:grid; grid-template-columns:1fr 120px 190px; gap:12px; align-items:center; padding:12px; border-radius:14px; background:#f9fafb; margin-top:10px; }
+    .session:hover { background:#f3f4f6; }
+    .columns { display:grid; grid-template-columns:260px 1fr; gap:18px; }
+    .side { background:#fff; border:1px solid #e5e7eb; border-radius:18px; padding:14px; align-self:start; }
+    .round { padding:12px; border-radius:14px; margin-bottom:8px; cursor:pointer; border:1px solid transparent; }
+    .round.active { background:#eff6ff; border-color:#93c5fd; }
+    .round strong { display:block; }
+    textarea { width:100%; min-height:110px; padding:12px; border:1px solid #d1d5db; border-radius:12px; resize:vertical; font-size:14px; }
+    .q { border-top:1px solid #f3f4f6; padding-top:16px; margin-top:16px; }
+    .metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:16px; }
+    .metric { background:#fff; border:1px solid #e5e7eb; border-radius:18px; padding:18px; }
+    .big { font-size:30px; color:#2563eb; font-weight:900; }
+    .back { color:#2563eb; cursor:pointer; font-weight:800; display:inline-block; margin-bottom:14px; }
+    .center { text-align:center; padding:54px 20px; }
+    .spinner { width:42px; height:42px; border:5px solid #dbeafe; border-top-color:#2563eb; border-radius:50%; margin:20px auto; animation:spin 1s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <div class="brand">高速公路技术面试</div>
+    <div class="crumb" id="crumb">简历管理</div>
+  </div>
+  <div class="wrap">
+    <section class="view active" id="resume">
+      <div class="title">
+        <div><h1>简历管理</h1><div class="sub">简历是入口；面试会话挂在简历下面，答题和报告都不是全局平级页面。</div></div>
+        <button class="primary">上传简历</button>
+      </div>
+      <div class="upload">拖拽上传 PDF / Word 简历</div>
+
+      <div class="card resume">
+        <div>
+          <div class="name">张三_Java后端开发.pdf <span class="tag green">已评估</span></div>
+          <div class="muted">resumeId: 18 · 上传时间：2026-05-23 10:20 · 技术标签：Java / Spring Boot / MySQL / Redis</div>
+          <div class="sessions">
+            <h2>这份简历的面试会话</h2>
+            <div class="session">
+              <div><strong>Session #1024</strong><div class="muted">2026-05-23 14:10 · 一套题 + 一次提交</div></div>
+              <span class="tag green">COMPLETED</span>
+              <button class="secondary" onclick="go('report')">查看报告</button>
+            </div>
+            <div class="session">
+              <div><strong>Session #1020</strong><div class="muted">2026-05-23 13:05 · 已答 5/10</div></div>
+              <span class="tag yellow">ANSWERING</span>
+              <button class="primary" onclick="go('answer')">继续答题</button>
+            </div>
+            <div class="session">
+              <div><strong>Session #1017</strong><div class="muted">2026-05-22 19:40 · 总评 PASS</div></div>
+              <span class="tag green">COMPLETED</span>
+              <button class="secondary" onclick="go('report')">查看报告</button>
+            </div>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="secondary">查看简历评估</button>
+          <button class="primary" onclick="go('answer')">开始新面试</button>
+          <button class="ghost">更多历史</button>
+        </div>
+      </div>
+
+      <div class="card resume">
+        <div>
+          <div class="name">李四_Spring开发.docx <span class="tag blue">分析中</span></div>
+          <div class="muted">resumeId: 19 · AI 正在分析简历，完成后才允许开始面试。</div>
+        </div>
+        <div class="actions"><button class="ghost">刷新状态</button></div>
+      </div>
+    </section>
+
+    <section class="view" id="answer">
+      <span class="back" onclick="go('resume')">← 返回简历管理</span>
+      <div class="title">
+        <div><h1>Session #1020 · 答题</h1><div class="sub">归属：张三_Java后端开发.pdf。当前会话只能提交一次，重练需创建新 Session。</div></div>
+        <button class="primary" onclick="go('evaluating')">提交本次面试</button>
+      </div>
+      <div class="columns">
+        <div class="side">
+          <div class="round active" onclick="round(this,'第1轮 Java基础',['HashMap 在 JDK 1.8 中的底层结构是什么？','volatile 解决了什么问题？'])"><strong>第1轮 Java基础</strong><span class="muted">2/2 已答</span></div>
+          <div class="round" onclick="round(this,'第2轮 Spring生态',['Spring Boot 自动配置原理是什么？','你项目中如何处理事务边界？','Spring MVC 请求链路是什么？'])"><strong>第2轮 Spring生态</strong><span class="muted">2/3 已答</span></div>
+          <div class="round" onclick="round(this,'第3轮 项目追问',['秒杀项目如何防止超卖？','缓存和数据库一致性怎么保证？'])"><strong>第3轮 项目追问</strong><span class="muted">1/2 已答</span></div>
+          <div class="round" onclick="round(this,'第4轮 工程素养',['线上接口变慢如何排查？','如何设计灰度发布方案？'])"><strong>第4轮 工程素养</strong><span class="muted">0/2 已答</span></div>
+        </div>
+        <div class="card">
+          <h2 id="roundTitle">第1轮 Java基础</h2>
+          <div id="qs"></div>
+          <div style="display:flex;justify-content:space-between;margin-top:18px"><button class="ghost">保存草稿</button><button class="primary" onclick="go('evaluating')">提交本次面试</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" id="evaluating">
+      <span class="back" onclick="go('answer')">← 返回答题</span>
+      <div class="card center">
+        <div class="spinner"></div>
+        <h1>Session #1020 正在评估</h1>
+        <div class="sub">状态：EVALUATING。评估完成后，本 Session 产生唯一报告。</div>
+        <div style="margin-top:20px"><button class="ghost">刷新状态</button> <button class="primary" onclick="go('report')">模拟完成：查看报告</button></div>
+      </div>
+    </section>
+
+    <section class="view" id="report">
+      <span class="back" onclick="go('resume')">← 返回简历管理</span>
+      <div class="title">
+        <div><h1>Session #1024 · 面试报告</h1><div class="sub">归属：张三_Java后端开发.pdf。报告对应该 Session 的题目和唯一提交结果。</div></div>
+        <button class="primary">查看完整 HTML 报告</button>
+      </div>
+      <div class="metrics">
+        <div class="metric"><div class="muted">总体等级</div><div class="big">GOOD</div><div>达到 Java 后端初中级岗位要求</div></div>
+        <div class="metric"><div class="muted">优势</div><div>Spring 项目表达较完整，接口设计思路清晰。</div></div>
+        <div class="metric"><div class="muted">待提升</div><div>JVM、并发细节、线上排查闭环。</div></div>
+      </div>
+      <div class="card"><h2>改进建议</h2><ol><li>用“背景-方案-取舍-结果”组织项目题回答。</li><li>补齐 JVM、并发、事务传播的源码级理解。</li><li>准备 2 个真实线上问题排查案例。</li></ol></div>
+      <div class="card"><h2>轮次评价</h2><p><strong>第1轮 Java基础：PASS</strong> — 概念能答出，但扩容、可见性细节不够。</p><p><strong>第2轮 Spring生态：GOOD</strong> — 能说明自动配置和事务边界。</p><p><strong>第3轮 项目追问：GOOD</strong> — 贴合简历，但一致性权衡可更具体。</p><p><strong>第4轮 工程素养：PASS</strong> — 有思路，缺少指标和链路追踪闭环。</p></div>
+    </section>
+  </div>
+<script>
+  const defaultQs = ['HashMap 在 JDK 1.8 中的底层结构是什么？','volatile 解决了什么问题？'];
+  const labels = {resume:'简历管理',answer:'简历管理 / 张三简历 / Session #1020 / 答题',evaluating:'简历管理 / 张三简历 / Session #1020 / 评估中',report:'简历管理 / 张三简历 / Session #1024 / 报告'};
+  function go(id){ document.querySelectorAll('.view').forEach(v=>v.classList.remove('active')); document.getElementById(id).classList.add('active'); document.getElementById('crumb').textContent=labels[id]; if(id==='answer') render(defaultQs); window.scrollTo(0,0); }
+  function render(qs){ document.getElementById('qs').innerHTML = qs.map((q,i)=>`<div class="q"><strong>Q${i+1}. ${q}</strong><textarea placeholder="请输入回答..."></textarea></div>`).join(''); }
+  function round(el,title,qs){ document.querySelectorAll('.round').forEach(r=>r.classList.remove('active')); el.classList.add('active'); document.getElementById('roundTitle').textContent=title; render(qs); }
+  render(defaultQs);
+</script>
+</body>
+</html>

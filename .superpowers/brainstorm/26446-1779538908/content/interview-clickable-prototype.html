@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智能面试系统原型</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f7fb; color: #1f2937; }
+    .app { min-height: 100vh; display: flex; flex-direction: column; }
+    .topbar { height: 64px; background: #111827; color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; }
+    .brand { font-size: 20px; font-weight: 700; }
+    .steps { display: flex; gap: 12px; font-size: 13px; color: #cbd5e1; }
+    .step { padding: 6px 12px; border-radius: 999px; background: rgba(255,255,255,0.08); }
+    .step.active { background: #2563eb; color: white; }
+    .layout { flex: 1; display: grid; grid-template-columns: 240px 1fr; min-height: 0; }
+    .sidebar { background: white; border-right: 1px solid #e5e7eb; padding: 20px; }
+    .nav-button { width: 100%; border: 0; background: transparent; text-align: left; padding: 12px 14px; margin-bottom: 8px; border-radius: 10px; cursor: pointer; font-size: 15px; color: #374151; }
+    .nav-button:hover { background: #f3f4f6; }
+    .nav-button.active { background: #eff6ff; color: #1d4ed8; font-weight: 700; }
+    .main { padding: 28px; overflow: auto; }
+    .view { display: none; max-width: 1120px; margin: 0 auto; }
+    .view.active { display: block; }
+    .page-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    h1 { margin: 0; font-size: 26px; }
+    .subtitle { margin-top: 6px; color: #6b7280; font-size: 14px; }
+    .card { background: white; border: 1px solid #e5e7eb; border-radius: 16px; padding: 20px; box-shadow: 0 6px 18px rgba(15,23,42,0.04); margin-bottom: 16px; }
+    .upload { border: 2px dashed #bfdbfe; background: #eff6ff; text-align: center; padding: 34px; border-radius: 16px; color: #1d4ed8; margin-bottom: 20px; }
+    .resume-card { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: start; }
+    .file-name { font-weight: 700; font-size: 17px; margin-bottom: 8px; }
+    .meta { color: #6b7280; font-size: 13px; margin-bottom: 12px; }
+    .status { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+    .ok { background: #dcfce7; color: #166534; }
+    .doing { background: #dbeafe; color: #1d4ed8; }
+    .gray { background: #f3f4f6; color: #4b5563; }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+    button.primary, button.secondary, button.danger { border: 0; border-radius: 10px; padding: 10px 14px; cursor: pointer; font-weight: 700; }
+    button.primary { background: #2563eb; color: white; }
+    button.secondary { background: #eef2ff; color: #3730a3; }
+    button.danger { background: #fee2e2; color: #991b1b; }
+    .history { margin-top: 14px; border-top: 1px solid #f3f4f6; padding-top: 12px; }
+    .history-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; color: #4b5563; }
+    .answer-layout { display: grid; grid-template-columns: 250px 1fr; gap: 18px; }
+    .round-list { background: white; border: 1px solid #e5e7eb; border-radius: 16px; padding: 14px; align-self: start; }
+    .round-item { padding: 12px; border-radius: 12px; margin-bottom: 8px; cursor: pointer; border: 1px solid transparent; }
+    .round-item.active { background: #eff6ff; border-color: #93c5fd; }
+    .round-title { font-weight: 700; }
+    .round-meta { font-size: 12px; color: #6b7280; margin-top: 4px; }
+    .question { border-top: 1px solid #f3f4f6; padding-top: 16px; margin-top: 16px; }
+    textarea { width: 100%; min-height: 110px; border: 1px solid #d1d5db; border-radius: 12px; padding: 12px; font-size: 14px; resize: vertical; outline: none; }
+    textarea:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+    .progress-box { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 18px; }
+    .metric { background: white; border: 1px solid #e5e7eb; border-radius: 16px; padding: 18px; }
+    .metric-value { font-size: 28px; font-weight: 800; color: #2563eb; }
+    .report-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 18px; }
+    .report-section h3 { margin: 0 0 10px; }
+    .round-report { cursor: pointer; }
+    .round-detail { display: none; margin-top: 12px; padding: 12px; background: #f9fafb; border-radius: 12px; color: #4b5563; line-height: 1.7; }
+    .round-detail.show { display: block; }
+    .spinner { width: 46px; height: 46px; border: 5px solid #dbeafe; border-top-color: #2563eb; border-radius: 50%; animation: spin 1s linear infinite; margin: 28px auto; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .center { text-align: center; padding: 60px 20px; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">高速公路技术面试</div>
+    <div class="steps">
+      <span class="step active" id="step-resume">简历</span>
+      <span class="step" id="step-answer">面试</span>
+      <span class="step" id="step-report">报告</span>
+    </div>
+  </header>
+  <div class="layout">
+    <aside class="sidebar">
+      <button class="nav-button active" data-view="resume" onclick="showView('resume')">简历管理</button>
+      <button class="nav-button" data-view="answer" onclick="showView('answer')">答题页</button>
+      <button class="nav-button" data-view="evaluating" onclick="showView('evaluating')">评估中</button>
+      <button class="nav-button" data-view="report" onclick="showView('report')">面试报告</button>
+    </aside>
+    <main class="main">
+      <section class="view active" id="view-resume">
+        <div class="page-title">
+          <div>
+            <h1>简历管理</h1>
+            <div class="subtitle">上传简历、触发评估，并从简历卡片开始新的模拟面试。</div>
+          </div>
+          <button class="primary">上传简历</button>
+        </div>
+        <div class="upload">拖拽 PDF / Word 简历到这里，或点击选择文件</div>
+        <div class="card resume-card">
+          <div>
+            <div class="file-name">张三_Java后端开发.pdf</div>
+            <div class="meta">上传时间：2026-05-23 10:20 · <span class="status ok">已评估</span></div>
+            <div>技术标签：Java、Spring Boot、MySQL、Redis、微服务</div>
+            <div class="history">
+              <strong>最近面试</strong>
+              <div class="history-row"><span>2026-05-23 14:10 · 总评 GOOD</span><a href="#" onclick="showView('report');return false;">查看报告</a></div>
+              <div class="history-row"><span>2026-05-22 19:40 · 总评 PASS</span><a href="#">查看报告</a></div>
+              <div class="history-row"><span>2026-05-21 21:05 · 未完成</span><a href="#" onclick="showView('answer');return false;">继续答题</a></div>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="secondary">查看简历报告</button>
+            <button class="primary" onclick="showView('answer')">开始新面试</button>
+          </div>
+        </div>
+        <div class="card resume-card">
+          <div>
+            <div class="file-name">李四_Spring开发.docx</div>
+            <div class="meta">上传时间：2026-05-23 12:06 · <span class="status doing">分析中</span></div>
+            <div>AI 正在分析简历并生成面试计划，完成后可开始面试。</div>
+          </div>
+          <div class="actions"><button class="secondary">刷新状态</button></div>
+        </div>
+      </section>
+
+      <section class="view" id="view-answer">
+        <div class="page-title">
+          <div>
+            <h1>模拟面试答题</h1>
+            <div class="subtitle">当前简历：张三_Java后端开发.pdf · 已答 5/10 · 提交前可修改。</div>
+          </div>
+          <button class="primary" onclick="showView('evaluating')">提交全部答案</button>
+        </div>
+        <div class="answer-layout">
+          <div class="round-list">
+            <div class="round-item active" onclick="selectRound(this, 'Java 基础', '基础', ['HashMap 在 JDK 1.8 中的底层结构是什么？','volatile 关键字解决了哪些问题？'])">
+              <div class="round-title">第1轮 Java 基础</div><div class="round-meta">基础 · 2/2 已答</div>
+            </div>
+            <div class="round-item" onclick="selectRound(this, 'Spring 生态', '中等', ['Spring Boot 自动配置原理是什么？','你项目中如何处理事务边界？','Spring MVC 请求处理链路是什么？'])">
+              <div class="round-title">第2轮 Spring 生态</div><div class="round-meta">中等 · 2/3 已答</div>
+            </div>
+            <div class="round-item" onclick="selectRound(this, '项目追问', '中高', ['你简历里的秒杀项目如何防止超卖？','Redis 缓存和数据库一致性怎么保证？'])">
+              <div class="round-title">第3轮 项目追问</div><div class="round-meta">中高 · 1/2 已答</div>
+            </div>
+            <div class="round-item" onclick="selectRound(this, '工程素养', '综合', ['线上接口响应变慢，你会如何排查？','如何设计一次灰度发布方案？','你如何做代码评审？'])">
+              <div class="round-title">第4轮 工程素养</div><div class="round-meta">综合 · 0/3 已答</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="meta" id="round-meta">第1轮 · Java 基础 · 基础</div>
+            <div id="questions"></div>
+            <div style="display:flex;justify-content:space-between;margin-top:18px;">
+              <button class="secondary">保存草稿</button>
+              <button class="primary" onclick="showView('evaluating')">提交全部答案</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="view-evaluating">
+        <div class="card center">
+          <div class="spinner"></div>
+          <h1>AI 正在评估你的回答</h1>
+          <p class="subtitle">系统会结合题目、评分要点、你的回答和简历评估结果生成面试报告。</p>
+          <button class="secondary">刷新状态</button>
+          <button class="primary" onclick="showView('report')">模拟完成，查看报告</button>
+        </div>
+      </section>
+
+      <section class="view" id="view-report">
+        <div class="page-title">
+          <div>
+            <h1>面试报告</h1>
+            <div class="subtitle">总览优先，支持展开每轮反馈和查看完整 HTML 报告。</div>
+          </div>
+          <button class="primary">查看完整 HTML 报告</button>
+        </div>
+        <div class="report-grid">
+          <div class="metric"><div class="meta">总体等级</div><div class="metric-value">GOOD</div><div>具备 Java 后端岗位基础能力</div></div>
+          <div class="metric"><div class="meta">主要优势</div><div>Spring 项目经验、接口设计表达较好</div></div>
+          <div class="metric"><div class="meta">优先提升</div><div>JVM、并发细节、故障排查体系化</div></div>
+        </div>
+        <div class="card report-section">
+          <h3>改进建议</h3>
+          <ol>
+            <li>补齐 JVM 内存模型、GC 调优和线上问题定位案例。</li>
+            <li>回答项目题时按“背景-方案-取舍-结果”组织。</li>
+            <li>针对 Redis/事务/一致性准备 2-3 个真实场景复盘。</li>
+          </ol>
+        </div>
+        <div class="card round-report" onclick="toggleDetail(this)">
+          <strong>第1轮 Java 基础 · PASS</strong>
+          <div class="round-detail show">基础概念基本正确，但 HashMap 扩容和并发可见性解释不够深入。</div>
+        </div>
+        <div class="card round-report" onclick="toggleDetail(this)">
+          <strong>第2轮 Spring 生态 · GOOD</strong>
+          <div class="round-detail">能说清自动配置和事务传播，但缺少源码层面的条件装配细节。</div>
+        </div>
+        <div class="card round-report" onclick="toggleDetail(this)">
+          <strong>第3轮 项目追问 · GOOD</strong>
+          <div class="round-detail">项目经验贴合简历，能说明缓存和限流方案，但数据一致性权衡需要更具体。</div>
+        </div>
+        <div class="card round-report" onclick="toggleDetail(this)">
+          <strong>第4轮 工程素养 · PASS</strong>
+          <div class="round-detail">有排查思路，但缺少指标、日志、链路追踪的系统化闭环。</div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+<script>
+  const defaultQuestions = ['HashMap 在 JDK 1.8 中的底层结构是什么？','volatile 关键字解决了哪些问题？'];
+  function setSteps(view) {
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    if (view === 'resume') document.getElementById('step-resume').classList.add('active');
+    if (view === 'answer' || view === 'evaluating') document.getElementById('step-answer').classList.add('active');
+    if (view === 'report') document.getElementById('step-report').classList.add('active');
+  }
+  function showView(view) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-' + view).classList.add('active');
+    document.querySelectorAll('.nav-button').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+    setSteps(view);
+    if (view === 'answer' && !document.getElementById('questions').children.length) renderQuestions(defaultQuestions);
+  }
+  function renderQuestions(items) {
+    document.getElementById('questions').innerHTML = items.map((q, i) => `
+      <div class="question">
+        <strong>Q${i + 1}. ${q}</strong>
+        <textarea placeholder="请输入你的回答，建议结合项目经历和具体场景..."></textarea>
+      </div>
+    `).join('');
+  }
+  function selectRound(el, name, difficulty, questions) {
+    document.querySelectorAll('.round-item').forEach(i => i.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('round-meta').textContent = `${el.querySelector('.round-title').textContent} · ${difficulty}`;
+    renderQuestions(questions);
+  }
+  function toggleDetail(el) {
+    const detail = el.querySelector('.round-detail');
+    detail.classList.toggle('show');
+  }
+  renderQuestions(defaultQuestions);
+</script>
+</body>
+</html>
