@@ -6,10 +6,10 @@ import com.alibaba.cloud.ai.graph.StateGraph;
 import com.alibaba.cloud.ai.graph.action.AsyncNodeAction;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.highway.agent.interview.node.QuestionMergeNode;
-import com.highway.agent.interview.node.QuestionPlanningNode;
-import com.highway.agent.interview.node.RoundQuestionNode;
-import com.highway.agent.service.interview.QuestionGenerationAgent;
+import com.highway.agent.interview.graph.node.QuestionMergeNode;
+import com.highway.agent.interview.graph.node.QuestionPlanningNode;
+import com.highway.agent.interview.graph.node.RoundQuestionNode;
+import com.highway.agent.interview.service.agent.QuestionGenerationAgent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

@@ -306,6 +306,31 @@
     let interviewRefreshTimer = null;
     let interviewView = 'resume';
 
+    const CONV_STORAGE_KEY = 'highway.conversationId';
+    const CONV_TTL_MS = 30 * 60 * 1000;
+
+    function saveConversationId(id) {
+        if (!id) { localStorage.removeItem(CONV_STORAGE_KEY); return; }
+        localStorage.setItem(CONV_STORAGE_KEY, JSON.stringify({ id: id, expireAt: Date.now() + CONV_TTL_MS }));
+    }
+
+    function loadStoredConversationId() {
+        try {
+            var raw = localStorage.getItem(CONV_STORAGE_KEY);
+            if (!raw) return null;
+            var obj = JSON.parse(raw);
+            if (!obj || !obj.id || !obj.expireAt || obj.expireAt < Date.now()) {
+                localStorage.removeItem(CONV_STORAGE_KEY);
+                return null;
+            }
+            return obj.id;
+        } catch (e) { return null; }
+    }
+
+    function touchConversationId() {
+        if (conversationId) saveConversationId(conversationId);
+    }
+
     function showModule(module) {
         document.getElementById('chatModule').classList.toggle('active', module === 'chat');
         document.getElementById('interviewModule').classList.toggle('active', module === 'interview');
@@ -339,6 +364,7 @@
 
     function newChat() {
         conversationId = null;
+        saveConversationId(null);
         document.getElementById('chatInner').innerHTML = '';
         showEmpty();
         loadConversations();
@@ -359,7 +385,7 @@
         }
     }
 
-    async function loadConversations(autoSelect) {
+    async function loadConversations() {
         try {
             var res = await fetch('/api/conversations');
             var data = await res.json();
@@ -371,12 +397,12 @@
                     '<button class="delete-btn" onclick="event.stopPropagation();deleteConversation(\'' + escapeAttribute(item.id) + '\')">&times;</button>' +
                 '</div>';
             }).join('');
-            if (autoSelect && data.length > 0 && !conversationId) switchConversation(data[0].id);
         } catch (e) { console.error(e); }
     }
 
     async function switchConversation(id) {
         conversationId = id;
+        saveConversationId(id);
         loadConversations();
         var inner = document.getElementById('chatInner');
         inner.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;font-size:14px;">加载中...</div>';
@@ -528,6 +554,7 @@
     }
 
     function doSend(message) {
+        touchConversationId();
         isStreaming = true;
         document.getElementById('sendBtn').disabled = true;
         document.getElementById('stopBtn').style.display = 'flex';
@@ -579,7 +606,7 @@
         });
         es.addEventListener('references', function(e) { renderRefs(refsEl, JSON.parse(e.data)); });
         es.addEventListener('suggested', function(e) { renderSuggested(sugEl, JSON.parse(e.data)); });
-        es.addEventListener('conversation', function(e) { conversationId = JSON.parse(e.data); loadConversations(); });
+        es.addEventListener('conversation', function(e) { conversationId = JSON.parse(e.data); saveConversationId(conversationId); loadConversations(); });
         es.addEventListener('done', function() { finishStream(es); });
         es.onerror = function() {
             es.close();
@@ -957,7 +984,23 @@
         sendFromMain();
     }
 
-    loadConversations(true);
+    (async function bootstrap() {
+        var stored = loadStoredConversationId();
+        if (stored) {
+            try {
+                var res = await fetch('/api/conversations/' + encodeURIComponent(stored) + '/messages');
+                if (res.ok) {
+                    var messages = await res.json();
+                    if (messages && messages.length > 0) {
+                        await switchConversation(stored);
+                        return;
+                    }
+                }
+            } catch (e) { /* fall through to fresh chat */ }
+            saveConversationId(null);
+        }
+        loadConversations();
+    })();
 </script>
 </body>
 </html>

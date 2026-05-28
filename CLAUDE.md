@@ -30,20 +30,39 @@ AI 智能面试智能体，基于 Spring AI Alibaba 构建，支持 ReAct 模式
 
 ### 分层架构
 
+**先按业务域分包,业务域内再分层。**
+
 ```
-controller/   → REST 端点，仅做参数校验和调用 Service，不含业务逻辑
-service/      → 业务逻辑，编排 AI 模型和工具调用
-model/        → DTO / Entity / Request / Response，不混用
-config/       → Spring 配置类，每个配置一个类
-tool/         → Spring AI Tool 实现，独立可测试
-memory/       → 对话记忆持久化
-prompt/       → Prompt 模板，与逻辑分离
-research/     → 深度研究相关（graph/node/edge/prompt/model/util）
+com.highway.agent
+├── HighwayAgentApplication.java
+├── common/              → 跨业务的通用基础设施
+│   ├── config/          → Spring 配置类（AI / WebClient / Minio 客户端等）
+│   ├── model/           → 通用 DTO（SseEvent / SearchResult 等）
+│   ├── service/         → 通用服务（MinioService / SuggestionService / PromptTemplate）
+│   └── tool/            → Spring AI Tool 实现（TavilySearchTool 等）
+│
+├── chat/                → 聊天机器人业务域
+│   ├── controller/      → REST 端点
+│   ├── service/         → 业务逻辑
+│   ├── memory/          → 对话记忆持久化 + Mapper
+│   └── model/           → DTO / Entity / Request / Response
+│
+└── interview/           → 智能面试业务域
+    ├── controller/
+    ├── service/         → 业务服务
+    │   └── agent/       → 各 LLM Agent（规划/出题/评估等）
+    ├── graph/           → 工作流图
+    │   └── node/        → 图节点
+    ├── mapper/          → MyBatis Mapper
+    ├── model/           → Entity + DTO
+    │   └── agent/       → Agent 输入输出 DTO
+    └── prompt/          → Prompt 模板
 ```
 
-- 严格单向依赖：`controller → service → mapper/tool`，禁止跨层调用
-- Service 之间可互相调用，但避免循环依赖
-- Controller 不直接操作 Mapper 或 Tool
+- **业务域之间禁止直接依赖**:`chat/` 与 `interview/` 不应互相 import,需要复用则下沉到 `common/`
+- **业务域内单向依赖**:`controller → service → mapper/memory`,禁止跨层反向调用
+- Controller 不直接操作 Mapper、Tool 或 LLM 客户端
+- 新增功能时,先判定它属于哪个业务域,再在域内按层放;真正通用的才下沉 `common/`
 
 ### Java 编码风格
 
