@@ -2,8 +2,6 @@ package com.highway.agent.chat.controller;
 
 import com.highway.agent.chat.memory.ChatMessageMapper;
 import com.highway.agent.chat.model.ChatMessage;
-import com.highway.agent.chat.model.ChatRequest;
-import com.highway.agent.chat.model.ChatResponse;
 import com.highway.agent.chat.service.ChatService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.client.ChatClient;
@@ -14,10 +12,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
@@ -38,35 +34,20 @@ public class ChatController {
 
     @PostMapping("/chat/stop")
     public Map<String, Object> stopChat(@RequestParam String conversationId) {
-        boolean stopped = chatService.stopStream(conversationId);
-        return Map.of("success", stopped);
+        return Map.of("success", chatService.stopStream(conversationId));
     }
 
-    @PostMapping("/chat/sync")
-    public ChatResponse chatSync(@RequestBody ChatRequest request) {
-        return chatService.chatSync(request.getConversationId(), request.getMessage());
-    }
-
-    /**
-     * 获取对话列表（含摘要）
-     */
     @GetMapping("/conversations")
     public List<Map<String, String>> listConversations() {
-        List<String> ids = chatMessageMapper.selectConversationIds();
-        return ids.stream().map(id -> {
+        return chatMessageMapper.selectConversationIds().stream().map(id -> {
             List<ChatMessage> messages = chatMessageMapper.selectLastN(id, 1);
-            String summary = "";
-            if (!messages.isEmpty()) {
-                String content = messages.get(0).getContent();
-                summary = content.length() > 30 ? content.substring(0, 30) + "..." : content;
-            }
+            String summary = messages.isEmpty() ? "" :
+                    messages.get(0).getContent().substring(0, Math.min(30, messages.get(0).getContent().length()));
+            if (!messages.isEmpty() && messages.get(0).getContent().length() > 30) summary += "...";
             return Map.of("id", id, "summary", summary);
-        }).collect(Collectors.toList());
+        }).toList();
     }
 
-    /**
-     * 获取对话历史消息
-     */
     @GetMapping("/conversations/{conversationId}/messages")
     public List<ChatMessage> getMessages(@PathVariable String conversationId) {
         return chatMessageMapper.selectLastN(conversationId, 100);
@@ -77,26 +58,15 @@ public class ChatController {
         chatMessageMapper.deleteByConversationId(conversationId);
     }
 
-    /**
-     * 诊断接口：验证 ChatClient 是否能正常调用
-     */
     @GetMapping("/diagnose")
     public Mono<Map<String, Object>> diagnose() {
         return Mono.fromCallable(() -> {
-                    try {
-                        String result = plainChatClient.prompt().user("说一个字：好").call().content();
-                        Map<String, Object> map = new HashMap<>();
-                        map.put("success", true);
-                        map.put("response", result != null ? result : "null");
-                        return map;
-                    } catch (Exception e) {
-                        Map<String, Object> map = new HashMap<>();
-                        map.put("success", false);
-                        map.put("error", e.getMessage());
-                        map.put("type", e.getClass().getSimpleName());
-                        return map;
-                    }
-                })
-                .subscribeOn(Schedulers.boundedElastic());
+            try {
+                String result = plainChatClient.prompt().user("说一个字：好").call().content();
+                return Map.<String, Object>of("success", true, "response", result != null ? result : "null");
+            } catch (Exception e) {
+                return Map.<String, Object>of("success", false, "error", e.getMessage());
+            }
+        }).subscribeOn(Schedulers.boundedElastic());
     }
 }
