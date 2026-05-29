@@ -14,14 +14,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SuggestionService {
 
-    private final ChatClient chatClient;
+    private final ChatClient plainChatClient;
     private final PromptTemplate promptTemplate;
 
     public List<String> generateSuggestions(String userMessage, String assistantAnswer, int count) {
         String prompt = promptTemplate.getSuggestionPrompt(count, userMessage, assistantAnswer);
 
         try {
-            String response = chatClient.prompt(prompt).call().content();
+            String response = plainChatClient.prompt(prompt).call().content();
             return parseSuggestions(response);
         } catch (Exception e) {
             log.error("Failed to generate suggestions", e);

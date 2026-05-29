@@ -26,7 +26,7 @@ public class ChatController {
 
     private final ChatService chatService;
     private final ChatMessageMapper chatMessageMapper;
-    private final ChatClient chatClient;
+    private final ChatClient plainChatClient;
 
     @GetMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> chatStream(
@@ -84,7 +84,7 @@ public class ChatController {
     public Mono<Map<String, Object>> diagnose() {
         return Mono.fromCallable(() -> {
                     try {
-                        String result = chatClient.prompt().user("说一个字：好").call().content();
+                        String result = plainChatClient.prompt().user("说一个字：好").call().content();
                         Map<String, Object> map = new HashMap<>();
                         map.put("success", true);
                         map.put("response", result != null ? result : "null");

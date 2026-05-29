@@ -20,4 +20,7 @@ public interface ChatMessageMapper extends BaseMapper<ChatMessage> {
 
     @Select("SELECT conversation_id FROM chat_message GROUP BY conversation_id ORDER BY MAX(created_at) DESC")
     List<String> selectConversationIds();
+
+    @Delete("DELETE FROM chat_message WHERE conversation_id = #{conversationId} AND role = 'assistant' ORDER BY created_at DESC LIMIT 1")
+    int deleteLastAssistant(@Param("conversationId") String conversationId);
 }

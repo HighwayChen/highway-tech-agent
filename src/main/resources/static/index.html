@@ -576,33 +576,15 @@
         var es = new EventSource(url);
         currentEventSource = es;
 
-        es.addEventListener('node', function(e) {
-            var d = JSON.parse(e.data);
-            if (d.outputType === 'AGENT_MODEL_FINISHED' && d.message && d.message.hasToolCalls) {
-                thinkContainer.style.display = 'block';
-                if (d.message.text) addThinkStep(thinkSteps, 'thought', d.message.text);
-                if (d.message.toolCalls) d.message.toolCalls.forEach(function(tc) {
-                    var a = tc.arguments || '';
-                    try { a = JSON.parse(a).query || a; } catch(x) {}
-                    addThinkStep(thinkSteps, 'action', a);
-                });
-                thinkSteps.classList.add('open');
-                thinkContainer.querySelector('.arrow').classList.add('open');
-                scrollBottom();
-            } else if (d.outputType === 'AGENT_TOOL_FINISHED' && d.message) {
-                (d.message.responses || []).forEach(function(c) { addThinkStep(thinkSteps, 'observation', c); });
-                scrollBottom();
-            } else if (d.outputType === 'AGENT_MODEL_STREAMING' && d.message && d.message.text) {
-                answerEl.classList.remove('typing-indicator');
-                thinkSteps.classList.remove('open');
-                thinkContainer.querySelector('.arrow').classList.remove('open');
-                answerText += d.message.text;
-                answerEl.innerHTML = renderMarkdown(answerText);
-                scrollBottom();
-            } else if (d.outputType === 'ERROR') {
-                answerEl.classList.remove('typing-indicator');
-                answerEl.textContent = d.message || '出错了';
-            }
+        es.addEventListener('token', function(e) {
+            answerEl.classList.remove('typing-indicator');
+            answerText += e.data;
+            answerEl.innerHTML = renderMarkdown(answerText);
+            scrollBottom();
+        });
+        es.addEventListener('error', function(e) {
+            answerEl.classList.remove('typing-indicator');
+            try { var d = JSON.parse(e.data); answerEl.textContent = d.message || '出错了'; } catch(x) { answerEl.textContent = '出错了'; }
         });
         es.addEventListener('references', function(e) { renderRefs(refsEl, JSON.parse(e.data)); });
         es.addEventListener('suggested', function(e) { renderSuggested(sugEl, JSON.parse(e.data)); });
