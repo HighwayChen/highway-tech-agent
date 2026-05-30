@@ -1,9 +1,9 @@
-package com.highway.agent.common.service;
+package com.highway.agent.chat.service;
 
-import com.highway.agent.common.service.PromptTemplate;
-import lombok.RequiredArgsConstructor;
+import com.highway.agent.chat.prompt.PromptTemplate;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
@@ -11,11 +11,16 @@ import java.util.List;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class SuggestionService {
 
     private final ChatClient plainChatClient;
     private final PromptTemplate promptTemplate;
+
+    public SuggestionService(@Qualifier("plainChatClient") ChatClient plainChatClient,
+                             PromptTemplate promptTemplate) {
+        this.plainChatClient = plainChatClient;
+        this.promptTemplate = promptTemplate;
+    }
 
     public List<String> generateSuggestions(String userMessage, String assistantAnswer, int count) {
         String prompt = promptTemplate.getSuggestionPrompt(count, userMessage, assistantAnswer);

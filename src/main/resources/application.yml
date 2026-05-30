@@ -60,6 +60,8 @@ tavily:
 agent:
   suggestion:
     count: 5
+  chat:
+    max-messages: 20
 
 minio:
   endpoint: http://47.99.202.93:9000

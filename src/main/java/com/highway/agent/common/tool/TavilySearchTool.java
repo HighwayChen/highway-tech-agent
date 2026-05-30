@@ -9,6 +9,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import org.springframework.ai.tool.function.FunctionToolCallback;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -66,6 +68,14 @@ public class TavilySearchTool {
      * 工具调用输入参数，record 类型保证生成 object schema
      */
     public record SearchRequest(String query) {}
+
+    public FunctionToolCallback asToolCallback() {
+        return FunctionToolCallback.builder("tavily_search",
+                        (java.util.function.Function<SearchRequest, String>) this::search)
+                .description("搜索互联网获取最新信息，返回搜索结果")
+                .inputType(SearchRequest.class)
+                .build();
+    }
 
     public Mono<List<SearchResult>> searchReactive(String query) {
         Map<String, Object> requestBody = new java.util.HashMap<>();

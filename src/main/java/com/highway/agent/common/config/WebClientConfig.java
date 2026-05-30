@@ -9,6 +9,7 @@ import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
+import reactor.netty.resources.ConnectionProvider;
 
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
@@ -18,7 +19,12 @@ public class WebClientConfig {
 
     @Bean
     public WebClient.Builder webClientBuilder() {
-        HttpClient httpClient = HttpClient.create()
+        ConnectionProvider provider = ConnectionProvider.builder("dashscope-pool")
+                .maxIdleTime(Duration.ofSeconds(30))
+                .maxLifeTime(Duration.ofMinutes(5))
+                .evictInBackground(Duration.ofSeconds(60))
+                .build();
+        HttpClient httpClient = HttpClient.create(provider)
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 60_000)
                 .responseTimeout(Duration.ofMinutes(5))
                 .doOnConnected(connection -> connection.addHandlerLast(new ReadTimeoutHandler(5, TimeUnit.MINUTES)));

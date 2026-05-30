@@ -1,7 +1,5 @@
 package com.highway.agent.interview.service;
 
-import com.highway.agent.common.service.MinioService;
-
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;

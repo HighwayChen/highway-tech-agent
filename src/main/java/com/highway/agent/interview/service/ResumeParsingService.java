@@ -1,7 +1,5 @@
 package com.highway.agent.interview.service;
 
-import com.highway.agent.common.service.MinioService;
-
 import lombok.RequiredArgsConstructor;
 import org.apache.tika.Tika;
 import org.springframework.stereotype.Service;

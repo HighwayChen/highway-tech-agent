@@ -1,4 +1,4 @@
-package com.highway.agent.common.service;
+package com.highway.agent.chat.prompt;
 
 import org.springframework.stereotype.Component;
 
@@ -9,7 +9,7 @@ import java.time.format.DateTimeFormatter;
 @Component
 public class PromptTemplate {
 
-    private static final String REACT_SYSTEM_PROMPT = """
+    private static final String CHAT_SYSTEM_PROMPT = """
             ## 角色
             你是一个智能体问答助手，名字叫做：海蔚，英文名叫highway，帮助用户解决问题。禁止提前给出一些推断性/不确定性的信息给用户。
 
@@ -43,9 +43,9 @@ public class PromptTemplate {
             助手：%s
             """;
 
-    public String getReActSystemPrompt() {
+    public String getChatSystemPrompt() {
         String now = ZonedDateTime.now(ZoneId.of("Asia/Shanghai")).format(FORMATTER);
-        return REACT_SYSTEM_PROMPT.formatted(now);
+        return CHAT_SYSTEM_PROMPT.formatted(now);
     }
 
     public String getSuggestionPrompt(int count, String userMessage, String assistantAnswer) {

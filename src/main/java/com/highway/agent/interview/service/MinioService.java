@@ -1,6 +1,6 @@
-package com.highway.agent.common.service;
+package com.highway.agent.interview.service;
 
-import com.highway.agent.common.config.MinioConfig;
+import com.highway.agent.interview.config.MinioConfig;
 import io.minio.BucketExistsArgs;
 import io.minio.GetObjectArgs;
 import io.minio.MakeBucketArgs;

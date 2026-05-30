@@ -576,20 +576,35 @@
         var es = new EventSource(url);
         currentEventSource = es;
 
-        es.addEventListener('token', function(e) {
-            answerEl.classList.remove('typing-indicator');
-            answerText += e.data;
-            answerEl.innerHTML = renderMarkdown(answerText);
-            scrollBottom();
-        });
-        es.addEventListener('error', function(e) {
-            answerEl.classList.remove('typing-indicator');
-            try { var d = JSON.parse(e.data); answerEl.textContent = d.message || '出错了'; } catch(x) { answerEl.textContent = '出错了'; }
-        });
-        es.addEventListener('references', function(e) { renderRefs(refsEl, JSON.parse(e.data)); });
-        es.addEventListener('suggested', function(e) { renderSuggested(sugEl, JSON.parse(e.data)); });
-        es.addEventListener('conversation', function(e) { conversationId = JSON.parse(e.data); saveConversationId(conversationId); loadConversations(); });
-        es.addEventListener('done', function() { finishStream(es); });
+        es.onmessage = function(e) {
+            var d = JSON.parse(e.data);
+            switch (d.type) {
+                case 'token':
+                    answerEl.classList.remove('typing-indicator');
+                    answerText += d.content;
+                    answerEl.innerHTML = renderMarkdown(answerText);
+                    scrollBottom();
+                    break;
+                case 'references':
+                    renderRefs(refsEl, d.data);
+                    break;
+                case 'suggested':
+                    renderSuggested(sugEl, d.data);
+                    break;
+                case 'conversation':
+                    conversationId = d.id;
+                    saveConversationId(conversationId);
+                    loadConversations();
+                    break;
+                case 'error':
+                    answerEl.classList.remove('typing-indicator');
+                    answerEl.textContent = d.message || '出错了';
+                    break;
+                case 'done':
+                    finishStream(es);
+                    break;
+            }
+        };
         es.onerror = function() {
             es.close();
             currentEventSource = null;

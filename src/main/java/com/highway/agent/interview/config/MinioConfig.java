@@ -1,4 +1,4 @@
-package com.highway.agent.common.config;
+package com.highway.agent.interview.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

@@ -5,8 +5,9 @@ import com.highway.agent.chat.model.ChatMessage;
 import com.highway.agent.chat.service.ChatService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
-import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -17,15 +18,25 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
-@RequiredArgsConstructor
 public class ChatController {
 
     private final ChatService chatService;
     private final ChatMessageMapper chatMessageMapper;
+    private final ChatMemory chatMemory;
     private final ChatClient plainChatClient;
 
+    public ChatController(ChatService chatService,
+                          ChatMessageMapper chatMessageMapper,
+                          ChatMemory chatMemory,
+                          @Qualifier("plainChatClient") ChatClient plainChatClient) {
+        this.chatService = chatService;
+        this.chatMessageMapper = chatMessageMapper;
+        this.chatMemory = chatMemory;
+        this.plainChatClient = plainChatClient;
+    }
+
     @GetMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<ServerSentEvent<String>> chatStream(
+    public Flux<String> chatStream(
             @RequestParam(required = false) String conversationId,
             @RequestParam String message,
             @RequestParam(required = false, defaultValue = "false") boolean skipSaveUser) {
@@ -55,7 +66,7 @@ public class ChatController {
 
     @DeleteMapping("/conversations/{conversationId}")
     public void deleteConversation(@PathVariable String conversationId) {
-        chatMessageMapper.deleteByConversationId(conversationId);
+        chatMemory.clear(conversationId);
     }
 
     @GetMapping("/diagnose")
