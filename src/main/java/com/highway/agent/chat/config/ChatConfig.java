@@ -11,27 +11,21 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 
 @Configuration
 public class ChatConfig {
 
     @Bean
-    @Primary
     public ChatClient chatClient(ChatModel chatModel,
+                                  ChatMemory chatMemory,
                                   PromptTemplate promptTemplate,
                                   TavilySearchTool tavilySearchTool,
-                                 ChatMemory chatMemory) {
+                                  @Value("${agent.suggestion.count:5}") int suggestionCount) {
         return ChatClient.builder(chatModel)
-                .defaultSystem(promptTemplate.getChatSystemPrompt())
+                .defaultSystem(promptTemplate.getChatSystemPrompt(suggestionCount))
                 .defaultToolCallbacks(tavilySearchTool.asToolCallback())
                 .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
                 .build();
-    }
-
-    @Bean
-    public ChatClient plainChatClient(ChatModel chatModel) {
-        return ChatClient.builder(chatModel).build();
     }
 
     @Bean

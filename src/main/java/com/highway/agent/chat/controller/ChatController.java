@@ -3,10 +3,8 @@ package com.highway.agent.chat.controller;
 import com.highway.agent.chat.memory.ChatMessageMapper;
 import com.highway.agent.chat.model.ChatMessage;
 import com.highway.agent.chat.service.ChatService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
@@ -23,16 +21,16 @@ public class ChatController {
     private final ChatService chatService;
     private final ChatMessageMapper chatMessageMapper;
     private final ChatMemory chatMemory;
-    private final ChatClient plainChatClient;
+    private final ChatClient chatClient;
 
     public ChatController(ChatService chatService,
                           ChatMessageMapper chatMessageMapper,
                           ChatMemory chatMemory,
-                          @Qualifier("plainChatClient") ChatClient plainChatClient) {
+                          ChatClient chatClient) {
         this.chatService = chatService;
         this.chatMessageMapper = chatMessageMapper;
         this.chatMemory = chatMemory;
-        this.plainChatClient = plainChatClient;
+        this.chatClient = chatClient;
     }
 
     @GetMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -73,7 +71,10 @@ public class ChatController {
     public Mono<Map<String, Object>> diagnose() {
         return Mono.fromCallable(() -> {
             try {
-                String result = plainChatClient.prompt().user("说一个字：好").call().content();
+                String result = chatClient.prompt()
+                        .user("说一个字：好")
+                        .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, "diagnose"))
+                        .call().content();
                 return Map.<String, Object>of("success", true, "response", result != null ? result : "null");
             } catch (Exception e) {
                 return Map.<String, Object>of("success", false, "error", e.getMessage());

@@ -15,6 +15,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MysqlChatMemoryRepository implements ChatMemoryRepository {
 
+    private static final String SUGGESTION_SEPARATOR = "---suggestions---";
+
     private final ChatMessageMapper mapper;
 
     @Override
@@ -36,9 +38,16 @@ public class MysqlChatMemoryRepository implements ChatMemoryRepository {
             ChatMessage entity = new ChatMessage();
             entity.setConversationId(conversationId);
             entity.setRole(message.getMessageType().getValue());
-            entity.setContent(message.getText());
+            entity.setContent(cleanContent(message.getText()));
             mapper.insert(entity);
         }
+    }
+
+    private String cleanContent(String content) {
+        if (content == null) return null;
+        int idx = content.indexOf(SUGGESTION_SEPARATOR);
+        if (idx >= 0) return content.substring(0, idx).stripTrailing();
+        return content;
     }
 
     @Override

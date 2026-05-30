@@ -30,25 +30,15 @@ public class PromptTemplate {
             4. 保持回答的清晰度和易读性
             5. 尽可能全面详细的回答用户问题
             6. 已有全部信息时，不要再调用搜索工具
+
+            ## 建议问题
+            回答结束后，另起一行输出 "---suggestions---"，然后每行输出一个用户可能想继续提问的问题，共 %d 个。
             """;
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss (EEEE)");
 
-    private static final String SUGGESTION_PROMPT = """
-            基于以下对话，生成 %d 个用户可能想继续提问的问题。
-            只返回问题列表，每行一个问题，不要编号，不要其他内容。
-
-            对话内容：
-            用户：%s
-            助手：%s
-            """;
-
-    public String getChatSystemPrompt() {
+    public String getChatSystemPrompt(int suggestionCount) {
         String now = ZonedDateTime.now(ZoneId.of("Asia/Shanghai")).format(FORMATTER);
-        return CHAT_SYSTEM_PROMPT.formatted(now);
-    }
-
-    public String getSuggestionPrompt(int count, String userMessage, String assistantAnswer) {
-        return String.format(SUGGESTION_PROMPT, count, userMessage, assistantAnswer);
+        return CHAT_SYSTEM_PROMPT.formatted(now, suggestionCount);
     }
 }

@@ -417,7 +417,8 @@
                     addBubble('user', msg.content);
                     lastUserMsg = msg.content;
                 } else {
-                    addAssistantBubble(renderMarkdown(msg.content));
+                    var clean = stripSuggestions(msg.content);
+                    addAssistantBubble(renderMarkdown(clean));
                     lastUserMsg = null;
                 }
             });
@@ -496,6 +497,13 @@
         var d = document.createElement('div');
         d.textContent = text == null ? '' : String(text);
         return d.innerHTML;
+    }
+
+    function stripSuggestions(text) {
+        if (!text) return text;
+        var idx = text.indexOf('---suggestions---');
+        if (idx >= 0) return text.substring(0, idx).trimEnd();
+        return text;
     }
 
     function escapeAttribute(text) {
@@ -582,11 +590,15 @@
                 case 'token':
                     answerEl.classList.remove('typing-indicator');
                     answerText += d.content;
-                    answerEl.innerHTML = renderMarkdown(answerText);
+                    answerEl.innerHTML = renderMarkdown(stripSuggestions(answerText));
                     scrollBottom();
                     break;
                 case 'references':
                     renderRefs(refsEl, d.data);
+                    break;
+                case 'answer':
+                    answerText = stripSuggestions(d.content);
+                    answerEl.innerHTML = renderMarkdown(answerText);
                     break;
                 case 'suggested':
                     renderSuggested(sugEl, d.data);

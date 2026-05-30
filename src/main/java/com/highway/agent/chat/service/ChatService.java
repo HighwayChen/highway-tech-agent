@@ -7,10 +7,8 @@ import com.highway.agent.common.model.SearchResult;
 import com.highway.agent.common.tool.TavilySearchTool;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.AssistantMessage;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -26,29 +24,25 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class ChatService {
 
+    private static final String SUGGESTION_SEPARATOR = "---suggestions---";
+
     private final ChatClient chatClient;
     private final TavilySearchTool tavilySearchTool;
     private final ChatMemory chatMemory;
     private final ChatMessageMapper chatMessageMapper;
-    private final SuggestionService suggestionService;
     private final ObjectMapper objectMapper;
-
-    @Value("${agent.suggestion.count:3}")
-    private int suggestionCount;
 
     private final ConcurrentHashMap<String, Sinks.Empty<Void>> activeStreams = new ConcurrentHashMap<>();
 
-    public ChatService(@Qualifier("chatClient") ChatClient chatClient,
+    public ChatService(ChatClient chatClient,
                        TavilySearchTool tavilySearchTool,
                        ChatMemory chatMemory,
                        ChatMessageMapper chatMessageMapper,
-                       SuggestionService suggestionService,
                        ObjectMapper objectMapper) {
         this.chatClient = chatClient;
         this.tavilySearchTool = tavilySearchTool;
         this.chatMemory = chatMemory;
         this.chatMessageMapper = chatMessageMapper;
-        this.suggestionService = suggestionService;
         this.objectMapper = objectMapper;
     }
 
@@ -99,11 +93,13 @@ public class ChatService {
                     return json("token", "content", text);
                 })
                 .concatWith(Flux.defer(() -> {
-                    String answer = answerBuilder.toString();
-                    if (skipSaveUser && !answer.isBlank()) {
-                        chatMemory.add(convId, new AssistantMessage(answer));
+                    String rawAnswer = answerBuilder.toString();
+                    ParsedAnswer parsed = parseAnswer(rawAnswer);
+
+                    if (skipSaveUser && !parsed.answer().isBlank()) {
+                        chatMemory.add(convId, new AssistantMessage(parsed.answer()));
                     }
-                    return postEvents(convId, userMessage, answer);
+                    return postEvents(convId, parsed);
                 }))
                 .doFinally(s -> activeStreams.remove(convId))
                 .onErrorResume(e -> {
@@ -112,17 +108,35 @@ public class ChatService {
                 });
     }
 
-    private Flux<String> postEvents(String convId, String userMessage, String answer) {
+    private ParsedAnswer parseAnswer(String rawAnswer) {
+        int idx = rawAnswer.indexOf(SUGGESTION_SEPARATOR);
+        if (idx < 0) {
+            return new ParsedAnswer(rawAnswer.trim(), List.of());
+        }
+        String answer = rawAnswer.substring(0, idx).trim();
+        String suggestionPart = rawAnswer.substring(idx + SUGGESTION_SEPARATOR.length()).trim();
+        List<String> suggestions = suggestionPart.lines()
+                .map(String::trim)
+                .filter(line -> !line.isBlank())
+                .map(line -> line.replaceAll("^\\d+[.、)\\s]+", ""))
+                .toList();
+        return new ParsedAnswer(answer, suggestions);
+    }
+
+    private Flux<String> postEvents(String convId, ParsedAnswer parsed) {
         List<String> events = new java.util.ArrayList<>();
+
+        if (!parsed.suggestions().isEmpty()) {
+            events.add(json("answer", "content", parsed.answer()));
+        }
 
         List<ChatResponse.Reference> refs = buildReferences(tavilySearchTool.drainSearchResults());
         if (!refs.isEmpty()) {
             events.add(json("references", "data", refs));
         }
 
-        List<String> suggestions = suggestionService.generateSuggestions(userMessage, answer, suggestionCount);
-        if (!suggestions.isEmpty()) {
-            events.add(json("suggested", "data", suggestions));
+        if (!parsed.suggestions().isEmpty()) {
+            events.add(json("suggested", "data", parsed.suggestions()));
         }
 
         events.add(json("conversation", "id", convId));
@@ -153,4 +167,6 @@ public class ChatService {
                         .build())
                 .toList();
     }
+
+    private record ParsedAnswer(String answer, List<String> suggestions) {}
 }
