@@ -3,286 +3,171 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Highway Agent</title>
+    <title>Highway</title>
     <link rel="stylesheet" href="vs2015.min.css">
     <script src="marked.min.js"></script>
     <script src="highlight.min.js"></script>
-    <script src="echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; background: #f6f7fb; color: #1f2937; overflow: hidden; }
+        body { height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; background: #f7f7f8; color: #1a1a1a; overflow: hidden; }
         button, input, textarea { font-family: inherit; }
         button { border: none; }
 
-        .app-shell { height: 100vh; display: grid; grid-template-columns: 224px 1fr; }
-        .app-nav { background: #111827; color: #fff; padding: 22px 14px; display: flex; flex-direction: column; gap: 22px; }
-        .brand-block { padding: 0 8px; }
-        .brand-name { font-size: 21px; font-weight: 800; letter-spacing: -0.4px; }
-        .brand-desc { margin-top: 5px; color: #9ca3af; font-size: 12px; line-height: 1.5; }
-        .module-nav { display: flex; flex-direction: column; gap: 8px; }
-        .module-btn { width: 100%; padding: 12px 13px; border-radius: 12px; background: transparent; color: #cbd5e1; cursor: pointer; text-align: left; transition: 0.16s; }
-        .module-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
-        .module-btn.active { background: #fff; color: #111827; box-shadow: 0 12px 30px rgba(0,0,0,0.16); }
-        .module-title { display: block; font-size: 14px; font-weight: 700; }
-        .module-subtitle { display: block; margin-top: 3px; font-size: 12px; color: inherit; opacity: 0.68; }
-        .nav-footer { margin-top: auto; padding: 12px 10px; color: #94a3b8; font-size: 12px; line-height: 1.6; border-top: 1px solid rgba(255,255,255,0.1); }
+        .app-shell { height: 100vh; display: grid; grid-template-columns: 260px 1fr; }
 
-        .module-stage { min-width: 0; height: 100vh; overflow: hidden; }
-        .module-page { display: none; height: 100%; }
-        .module-page.active { display: flex; }
-
-        .chat-module { background: #fff; }
-        .chat-sidebar { width: 286px; border-right: 1px solid #e5e7eb; background: #fbfbfd; display: flex; flex-direction: column; flex-shrink: 0; }
-        .chat-sidebar-header { padding: 18px 14px 12px; border-bottom: 1px solid #eef0f4; }
-        .new-chat-btn { width: 100%; padding: 11px 14px; border: 1px solid #d9dde6; background: #fff; color: #111827; border-radius: 11px; cursor: pointer; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 7px; transition: 0.16s; }
-        .new-chat-btn:hover { background: #f3f4f6; }
-        .sidebar-label { padding: 14px 16px 6px; font-size: 12px; color: #8b95a7; font-weight: 700; }
-        .conversation-list { flex: 1; overflow-y: auto; padding: 4px 9px 14px; }
-        .conversation-item { padding: 10px 12px; border-radius: 10px; cursor: pointer; font-size: 14px; margin-bottom: 3px; display: flex; justify-content: space-between; align-items: center; color: #4b5563; transition: background 0.1s; }
-        .conversation-item:hover { background: #f0f2f7; }
-        .conversation-item.active { background: #e8edff; color: #1f3b8a; font-weight: 700; }
+        /* Sidebar */
+        .sidebar { background: #1c1c1c; color: #e0e0e0; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 20px 16px 16px; }
+        .brand-name { font-size: 18px; font-weight: 700; color: #fff; letter-spacing: -0.3px; }
+        .new-chat-btn { width: 100%; margin-top: 14px; padding: 10px 14px; border: 1px solid #3a3a3a; background: transparent; color: #e0e0e0; border-radius: 10px; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px; transition: 0.15s; }
+        .new-chat-btn:hover { background: #2a2a2a; border-color: #4a4a4a; }
+        .sidebar-label { padding: 14px 18px 6px; font-size: 11px; color: #777; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .conversation-list { flex: 1; overflow-y: auto; padding: 4px 8px 14px; }
+        .conversation-item { padding: 9px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; margin-bottom: 2px; display: flex; justify-content: space-between; align-items: center; color: #b0b0b0; transition: background 0.1s; }
+        .conversation-item:hover { background: #2a2a2a; color: #e0e0e0; }
+        .conversation-item.active { background: #333; color: #fff; }
         .conv-info { flex: 1; min-width: 0; }
         .conv-summary { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .delete-btn { display: none; background: none; color: #9ca3af; cursor: pointer; font-size: 16px; margin-left: 8px; flex-shrink: 0; }
+        .delete-btn { display: none; background: none; color: #666; cursor: pointer; font-size: 15px; margin-left: 8px; flex-shrink: 0; }
         .conversation-item:hover .delete-btn { display: block; }
 
+        /* Main area */
         .chat-main { flex: 1; min-width: 0; display: flex; flex-direction: column; background: #fff; }
-        .chat-topbar { height: 62px; padding: 0 26px; border-bottom: 1px solid #eef0f4; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
-        .page-title { font-size: 18px; font-weight: 800; color: #111827; }
-        .page-subtitle { margin-top: 2px; font-size: 12px; color: #8b95a7; }
+
+        /* Empty state */
         .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 24px; }
-        .empty-state .brand { font-size: 30px; font-weight: 800; color: #111827; margin-bottom: 6px; letter-spacing: -0.5px; }
-        .empty-state .brand-sub { font-size: 14px; color: #9ca3af; margin-bottom: 32px; }
+        .empty-state .brand { font-size: 28px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
+        .empty-state .brand-sub { font-size: 14px; color: #999; margin-bottom: 32px; }
         .center-input-box { width: 100%; max-width: 680px; }
+
+        /* Chat area */
         .chat-area { flex: 1; min-height: 0; display: none; flex-direction: column; }
         .chat-area.active { display: flex; }
         .chat-container { flex: 1; overflow-y: auto; padding: 24px 0; background: #fff; }
-        .chat-inner { max-width: 760px; margin: 0 auto; padding: 0 24px; }
-        .message { margin-bottom: 28px; display: flex; gap: 14px; align-items: flex-start; }
+        .chat-inner { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+
+        /* Messages */
+        .message { margin-bottom: 24px; display: flex; gap: 12px; align-items: flex-start; }
         .message.user { justify-content: flex-end; }
         .message.assistant { justify-content: flex-start; }
-        .msg-avatar { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
-        .message.assistant .msg-avatar { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: #fff; }
+        .msg-avatar { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+        .message.assistant .msg-avatar { background: #5b5fc7; color: #fff; }
         .message-bubble { line-height: 1.7; font-size: 15px; max-width: 100%; }
-        .message.user .message-bubble { background: #f0f2f6; color: #222; padding: 10px 16px; border-radius: 16px; border-bottom-right-radius: 4px; white-space: pre-wrap; max-width: 70%; font-size: 14px; }
-        .input-section { padding: 0 24px 24px; flex-shrink: 0; }
-        .input-box-wrap { max-width: 760px; margin: 0 auto; }
-        .input-box { display: flex; align-items: flex-end; gap: 10px; background: #f5f6f8; border: 1px solid #e1e5ec; border-radius: 17px; padding: 10px 12px 10px 18px; transition: border-color 0.2s, box-shadow 0.2s; }
-        .input-box:focus-within { border-color: #9aa8ff; box-shadow: 0 0 0 4px rgba(79,70,229,0.08); }
-        .chat-input { flex: 1; padding: 4px 0; border: none; background: transparent; font-size: 15px; outline: none; resize: none; color: #111827; min-height: 24px; max-height: 120px; line-height: 1.5; }
-        .chat-input::placeholder { color: #a0a8b8; }
-        .send-btn, .stop-btn { width: 36px; height: 36px; color: #fff; border-radius: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .send-btn { background: #111827; font-size: 15px; }
-        .send-btn:hover { background: #2d3748; }
-        .send-btn:disabled { background: #c9ced8; cursor: not-allowed; }
-        .stop-btn { background: #ef4444; font-size: 13px; display: none; }
+        .message.user .message-bubble { background: #eef0ff; color: #1a1a1a; padding: 10px 16px; border-radius: 16px; border-bottom-right-radius: 4px; white-space: pre-wrap; max-width: 70%; font-size: 14px; }
 
+        /* Input */
+        .input-section { padding: 0 24px 24px; flex-shrink: 0; }
+        .input-box-wrap { max-width: 720px; margin: 0 auto; }
+        .input-box { display: flex; align-items: flex-end; gap: 8px; background: #f7f7f8; border: 1px solid #e0e0e0; border-radius: 14px; padding: 10px 12px 10px 16px; transition: border-color 0.2s, box-shadow 0.2s; }
+        .input-box:focus-within { border-color: #5b5fc7; box-shadow: 0 0 0 3px rgba(91,95,199,0.1); }
+        .chat-input { flex: 1; padding: 4px 0; border: none; background: transparent; font-size: 15px; outline: none; resize: none; color: #1a1a1a; min-height: 24px; max-height: 120px; line-height: 1.5; }
+        .chat-input::placeholder { color: #aaa; }
+        .send-btn, .stop-btn { width: 34px; height: 34px; color: #fff; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .send-btn { background: #5b5fc7; font-size: 14px; }
+        .send-btn:hover { background: #4a4eb8; }
+        .send-btn:disabled { background: #ccc; cursor: not-allowed; }
+        .stop-btn { background: #ef4444; font-size: 12px; display: none; }
+
+        /* Markdown */
         .markdown-body { line-height: 1.75; word-wrap: break-word; color: #1a1a1a; }
         .markdown-body p { margin: 0 0 10px; }
         .markdown-body p:last-child { margin-bottom: 0; }
-        .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 { margin: 18px 0 8px; font-weight: 700; color: #111827; }
-        .markdown-body h2 { font-size: 1.2em; }
+        .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 { margin: 16px 0 8px; font-weight: 700; color: #1a1a1a; }
+        .markdown-body h2 { font-size: 1.15em; }
         .markdown-body h3 { font-size: 1.05em; }
         .markdown-body ul, .markdown-body ol { margin: 0 0 10px; padding-left: 22px; }
         .markdown-body li { margin: 4px 0; }
-        .markdown-body blockquote { margin: 0 0 10px; padding: 8px 14px; border-left: 3px solid #d9dde6; color: #4b5563; background: #fafafa; border-radius: 4px; }
+        .markdown-body blockquote { margin: 0 0 10px; padding: 8px 14px; border-left: 3px solid #ddd; color: #555; background: #fafafa; border-radius: 4px; }
         .markdown-body code { background: #f3f4f6; padding: 2px 5px; border-radius: 4px; font-size: 0.87em; font-family: "JetBrains Mono", Menlo, Monaco, Consolas, monospace; color: #c026d3; }
         .markdown-body pre { margin: 0 0 10px; padding: 14px; background: #1e1e1e; border-radius: 10px; overflow-x: auto; }
         .markdown-body pre code { background: none; padding: 0; color: #d4d4d4; }
         .markdown-body table { border-collapse: collapse; margin: 0 0 10px; width: 100%; font-size: 14px; }
-        .markdown-body th, .markdown-body td { border: 1px solid #e5e7eb; padding: 7px 12px; text-align: left; }
+        .markdown-body th, .markdown-body td { border: 1px solid #e0e0e0; padding: 7px 12px; text-align: left; }
         .markdown-body th { background: #f9fafb; font-weight: 700; }
-        .markdown-body a { color: #4f46e5; text-decoration: none; }
+        .markdown-body a { color: #5b5fc7; text-decoration: none; }
         .markdown-body a:hover { text-decoration: underline; }
-        .references { margin-top: 14px; padding: 10px 14px; background: #f9fafb; border-radius: 9px; border: 1px solid #eef0f4; }
-        .references-header { display: flex; align-items: center; gap: 7px; cursor: pointer; padding: 4px 0; user-select: none; }
-        .references-header .arrow, .thinking-toggle .arrow { display: inline-block; transition: transform 0.15s; font-size: 8px; color: #9ca3af; }
+
+        /* References */
+        .references { margin-top: 12px; padding: 10px 14px; background: #fafafa; border-radius: 8px; border: 1px solid #eee; }
+        .references-header { display: flex; align-items: center; gap: 6px; cursor: pointer; padding: 3px 0; user-select: none; }
+        .references-header .arrow, .thinking-toggle .arrow { display: inline-block; transition: transform 0.15s; font-size: 8px; color: #999; }
         .references-header .arrow.open, .thinking-toggle .arrow.open { transform: rotate(90deg); }
-        .references-header h4 { font-size: 12px; color: #6b7280; margin: 0; font-weight: 700; }
-        .references-header .count { font-size: 11px; color: #9ca3af; }
-        .reference-list { display: none; margin-top: 6px; }
+        .references-header h4 { font-size: 12px; color: #888; margin: 0; font-weight: 600; }
+        .references-header .count { font-size: 11px; color: #aaa; }
+        .reference-list { display: none; margin-top: 4px; }
         .reference-list.open { display: block; }
-        .reference-item { font-size: 13px; color: #4f46e5; margin: 3px 0; }
-        .suggested { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; }
-        .suggested-tag, .regen-btn { padding: 7px 14px; background: #f5f6f8; border: 1px solid #e1e5ec; border-radius: 18px; font-size: 13px; color: #4b5563; cursor: pointer; transition: 0.15s; }
-        .suggested-tag:hover, .regen-btn:hover { background: #edf0f6; color: #111827; }
-        .thinking-container { margin-bottom: 14px; }
-        .thinking-toggle { display: flex; align-items: center; gap: 7px; cursor: pointer; padding: 7px 10px; color: #6b7280; font-size: 13px; user-select: none; border-radius: 7px; transition: background 0.1s; }
-        .thinking-toggle:hover { background: #f5f6f8; }
-        .thinking-steps { display: none; margin-top: 6px; padding-left: 14px; }
+        .reference-item { font-size: 13px; color: #5b5fc7; margin: 3px 0; }
+
+        /* Suggestions */
+        .suggested { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+        .suggested-tag, .regen-btn { padding: 7px 14px; background: #f7f7f8; border: 1px solid #e0e0e0; border-radius: 16px; font-size: 13px; color: #555; cursor: pointer; transition: 0.15s; }
+        .suggested-tag:hover, .regen-btn:hover { background: #eef0ff; color: #1a1a1a; border-color: #5b5fc7; }
+
+        /* Thinking */
+        .thinking-container { margin-bottom: 12px; }
+        .thinking-toggle { display: flex; align-items: center; gap: 6px; cursor: pointer; padding: 6px 8px; color: #888; font-size: 13px; user-select: none; border-radius: 6px; transition: background 0.1s; }
+        .thinking-toggle:hover { background: #f5f5f5; }
+        .thinking-steps { display: none; margin-top: 4px; padding-left: 14px; }
         .thinking-steps.open { display: block; }
-        .thinking-step { margin-bottom: 8px; font-size: 13px; line-height: 1.6; color: #4b5563; }
-        .step-label { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-right: 6px; vertical-align: top; }
+        .thinking-step { margin-bottom: 6px; font-size: 13px; line-height: 1.6; color: #555; }
+        .step-label { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-right: 5px; vertical-align: top; }
         .thought-label { background: #fef3c7; color: #92400e; }
         .action-label { background: #dbeafe; color: #1e40af; }
         .observation-label { background: #d1fae5; color: #065f46; }
-        .observation-content { display: block; margin-top: 3px; padding: 6px 10px; background: #f9fafb; border-radius: 5px; border: 1px solid #eef0f4; max-height: 100px; overflow-y: auto; font-family: monospace; font-size: 12px; color: #4b5563; }
-        .typing-indicator { color: #9ca3af; font-size: 14px; }
-        .typing-indicator::before { content: '工作中'; }
-        .typing-indicator::after { content: ''; display: inline-block; width: 5px; height: 5px; background: #9ca3af; border-radius: 50%; animation: pulse 1.2s infinite; margin-left: 4px; vertical-align: middle; }
+        .observation-content { display: block; margin-top: 3px; padding: 6px 10px; background: #fafafa; border-radius: 5px; border: 1px solid #eee; max-height: 100px; overflow-y: auto; font-family: monospace; font-size: 12px; color: #555; }
+
+        /* Typing indicator */
+        .typing-indicator { color: #999; font-size: 14px; }
+        .typing-indicator::before { content: '思考中'; }
+        .typing-indicator::after { content: ''; display: inline-block; width: 4px; height: 4px; background: #999; border-radius: 50%; animation: pulse 1.2s infinite; margin-left: 4px; vertical-align: middle; }
         @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
 
-        .interview-module { flex-direction: column; background: #f6f7fb; overflow: hidden; }
-        .interview-header { padding: 20px 28px; background: #fff; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
-        .interview-header-actions { display: flex; gap: 10px; align-items: center; }
-        .interview-refresh-note { font-size: 12px; color: #8b95a7; }
-        .interview-body { flex: 1; min-height: 0; padding: 20px 24px 24px; overflow: hidden; }
-        .interview-layout { height: 100%; display: grid; grid-template-columns: 340px 1fr; gap: 18px; max-width: 1380px; margin: 0 auto; }
-        .resume-panel, .work-panel { min-height: 0; background: #fff; border: 1px solid #e5e7eb; border-radius: 18px; box-shadow: 0 14px 36px rgba(15,23,42,0.05); overflow: hidden; }
-        .resume-panel { display: flex; flex-direction: column; }
-        .panel-section { padding: 16px; border-bottom: 1px solid #eef0f4; }
-        .panel-section:last-child { border-bottom: none; }
-        .panel-title { font-size: 15px; font-weight: 800; color: #111827; margin-bottom: 10px; }
-        .interview-upload { display: flex; gap: 8px; align-items: center; }
-        .interview-upload input { flex: 1; min-width: 0; font-size: 13px; }
-        .resume-list { flex: 1; min-height: 0; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-        .resume-item { padding: 12px; border: 1px solid #edf0f5; border-radius: 13px; cursor: pointer; background: #fff; transition: 0.14s; }
-        .resume-item:hover { background: #f8fafc; border-color: #d9e0ec; }
-        .resume-item.active { border-color: #4f46e5; background: #eef2ff; box-shadow: inset 3px 0 0 #4f46e5; }
-        .resume-title { font-size: 14px; font-weight: 800; color: #111827; word-break: break-word; }
-        .resume-meta { margin-top: 6px; font-size: 12px; color: #64748b; line-height: 1.5; }
-        .work-panel { overflow-y: auto; padding: 20px; }
-        .work-card-title { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
-        .work-card-title h2 { font-size: 20px; color: #111827; line-height: 1.3; }
-        .work-card-title p { margin-top: 5px; color: #64748b; font-size: 13px; }
-        .interview-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
-        .interview-primary, .interview-secondary, .interview-danger { padding: 9px 13px; border-radius: 10px; border: 1px solid transparent; cursor: pointer; font-size: 13px; font-weight: 700; white-space: nowrap; transition: 0.15s; }
-        .interview-primary { background: #111827; color: #fff; }
-        .interview-primary:hover { background: #2d3748; }
-        .interview-secondary { background: #f8fafc; border-color: #d9e0ec; color: #1f2937; }
-        .interview-secondary:hover { background: #eef2f7; }
-        .interview-danger { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
-        .interview-primary:disabled, .interview-secondary:disabled, .interview-danger:disabled { opacity: 0.5; cursor: not-allowed; }
-        .status-pill { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 800; background: #f1f5f9; color: #475569; }
-        .status-pill.ANALYZED, .status-pill.READY, .status-pill.COMPLETED { background: #dcfce7; color: #166534; }
-        .status-pill.ANALYZING, .status-pill.GENERATING, .status-pill.EVALUATING, .status-pill.ANSWERING { background: #fef3c7; color: #92400e; }
-        .status-pill.FAILED, .status-pill.GENERATE_FAILED, .status-pill.EVALUATE_FAILED { background: #fee2e2; color: #991b1b; }
-        .interview-empty { text-align: center; color: #94a3b8; padding: 52px 16px; font-size: 14px; }
-        .interview-loading { color: #64748b; font-size: 13px; padding: 10px; }
-        .interview-alert { margin-top: 10px; padding: 10px 12px; border-radius: 10px; font-size: 13px; line-height: 1.5; background: #fef2f2; color: #991b1b; display: none; }
-        .interview-summary { color: #475569; font-size: 14px; line-height: 1.75; white-space: pre-wrap; }
-        .summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
-        .summary-card { padding: 14px; border: 1px solid #eef0f4; border-radius: 13px; background: #fbfdff; }
-        .summary-card h3 { font-size: 14px; margin-bottom: 8px; color: #111827; }
-        .session-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-        .session-chip { padding: 8px 11px; border: 1px solid #d9e0ec; border-radius: 10px; background: #fff; cursor: pointer; font-size: 13px; color: #334155; }
-        .session-chip.active { border-color: #4f46e5; background: #eef2ff; color: #1f3b8a; }
-        .question-round { margin-top: 14px; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden; }
-        .round-header { background: #f8fafc; padding: 11px 13px; font-size: 14px; font-weight: 800; color: #111827; border-bottom: 1px solid #e5e7eb; }
-        .question-item { padding: 14px; border-bottom: 1px solid #eef0f4; }
-        .question-item:last-child { border-bottom: none; }
-        .question-content { color: #1f2937; line-height: 1.65; font-size: 14px; margin-bottom: 9px; }
-        .question-answer { width: 100%; min-height: 98px; border: 1px solid #d9e0ec; border-radius: 12px; padding: 10px; resize: vertical; font-size: 14px; line-height: 1.6; outline: none; }
-        .question-answer:focus { border-color: #4f46e5; box-shadow: 0 0 0 4px rgba(79,70,229,0.1); }
-        .question-feedback { margin-top: 8px; padding: 9px 11px; background: #f8fafc; border-radius: 10px; color: #475569; font-size: 13px; line-height: 1.6; }
-        .report-frame { width: 100%; min-height: 620px; border: 1px solid #e5e7eb; border-radius: 14px; background: #fff; }
-
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #aaa; }
     </style>
 </head>
 <body>
 <div class="app-shell">
-    <aside class="app-nav">
-        <div class="brand-block">
+    <aside class="sidebar">
+        <div class="sidebar-header">
             <div class="brand-name">Highway</div>
-            <div class="brand-desc">AI 工作台</div>
+            <button class="new-chat-btn" onclick="newChat()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                新建对话
+            </button>
         </div>
-        <nav class="module-nav">
-            <button class="module-btn active" id="chatModuleBtn" onclick="showModule('chat')">
-                <span class="module-title">AI 对话助手</span>
-                <span class="module-subtitle">联网问答与搜索增强</span>
-            </button>
-            <button class="module-btn" id="interviewModuleBtn" onclick="showModule('interview')">
-                <span class="module-title">智能面试系统</span>
-                <span class="module-subtitle">简历分析、出题、评估</span>
-            </button>
-        </nav>
-        <div class="nav-footer">面试任务运行中会每 5 秒自动刷新状态。</div>
+        <div class="sidebar-label">对话历史</div>
+        <div class="conversation-list" id="conversationList"></div>
     </aside>
 
-    <main class="module-stage">
-        <section class="module-page chat-module active" id="chatModule">
-            <aside class="chat-sidebar">
-                <div class="chat-sidebar-header">
-                    <button class="new-chat-btn" onclick="newChat()">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        新建对话
-                    </button>
+    <main class="chat-main">
+        <div class="empty-state" id="emptyState">
+            <div class="brand">Highway</div>
+            <div class="brand-sub">有什么想问的，尽管说</div>
+            <div class="center-input-box">
+                <div class="input-box" id="emptyInputBox">
+                    <textarea class="chat-input" id="emptyChatInput" rows="1" placeholder="输入你的问题..." onkeydown="handleInputKey(event, 'empty')"></textarea>
+                    <button class="send-btn" id="emptySendBtn" onclick="sendFromEmpty()">&#10148;</button>
                 </div>
-                <div class="sidebar-label">对话历史</div>
-                <div class="conversation-list" id="conversationList"></div>
-            </aside>
-            <div class="chat-main">
-                <div class="chat-topbar">
-                    <div>
-                        <div class="page-title">AI 对话助手</div>
-                        <div class="page-subtitle">支持工具调用、参考来源和建议问题</div>
-                    </div>
-                </div>
-                <div class="empty-state" id="emptyState">
-                    <div class="brand">Highway</div>
-                    <div class="brand-sub">AI 联网问答助手</div>
-                    <div class="center-input-box">
-                        <div class="input-box" id="emptyInputBox">
-                            <textarea class="chat-input" id="emptyChatInput" rows="1" placeholder="有什么想问的..." onkeydown="handleInputKey(event, 'empty')"></textarea>
-                            <button class="send-btn" id="emptySendBtn" onclick="sendFromEmpty()">&#10148;</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="chat-area" id="chatArea">
-                    <div class="chat-container" id="chatContainer">
-                        <div class="chat-inner" id="chatInner"></div>
-                    </div>
-                    <div class="input-section">
-                        <div class="input-box-wrap">
-                            <div class="input-box" id="mainInputBox">
-                                <textarea class="chat-input" id="mainChatInput" rows="1" placeholder="有什么想问的..." onkeydown="handleInputKey(event, 'main')"></textarea>
-                                <button class="send-btn" id="sendBtn" onclick="sendFromMain()">&#10148;</button>
-                                <button class="stop-btn" id="stopBtn" onclick="stopStream()">&#9632;</button>
-                            </div>
-                        </div>
+            </div>
+        </div>
+        <div class="chat-area" id="chatArea">
+            <div class="chat-container" id="chatContainer">
+                <div class="chat-inner" id="chatInner"></div>
+            </div>
+            <div class="input-section">
+                <div class="input-box-wrap">
+                    <div class="input-box" id="mainInputBox">
+                        <textarea class="chat-input" id="mainChatInput" rows="1" placeholder="输入你的问题..." onkeydown="handleInputKey(event, 'main')"></textarea>
+                        <button class="send-btn" id="sendBtn" onclick="sendFromMain()">&#10148;</button>
+                        <button class="stop-btn" id="stopBtn" onclick="stopStream()">&#9632;</button>
                     </div>
                 </div>
             </div>
-        </section>
-
-        <section class="module-page interview-module" id="interviewModule">
-            <header class="interview-header">
-                <div>
-                    <div class="page-title">智能面试系统</div>
-                    <div class="page-subtitle">上传简历 → AI 分析 → 创建面试 → 回答问题 → 生成报告</div>
-                </div>
-                <div class="interview-header-actions">
-                    <span class="interview-refresh-note">运行中状态自动刷新</span>
-                    <button class="interview-secondary" onclick="refreshInterviewView()">刷新状态</button>
-                </div>
-            </header>
-            <div class="interview-body">
-                <div class="interview-layout">
-                    <aside class="resume-panel">
-                        <div class="panel-section">
-                            <div class="panel-title">上传简历</div>
-                            <div class="interview-upload">
-                                <input type="file" id="resumeFile" accept=".pdf,.doc,.docx,.txt">
-                                <button class="interview-primary" onclick="uploadResume()">上传</button>
-                            </div>
-                            <div class="interview-alert" id="interviewAlert"></div>
-                        </div>
-                        <div class="panel-section">
-                            <div class="panel-title">简历列表</div>
-                            <div class="resume-meta">选择一份简历后，在右侧完成分析和面试流程。</div>
-                        </div>
-                        <div class="resume-list" id="resumeList"><div class="interview-loading">加载中...</div></div>
-                    </aside>
-                    <section class="work-panel" id="interviewDetail">
-                        <div class="interview-empty">请选择一份简历开始模拟面试</div>
-                    </section>
-                </div>
-            </div>
-        </section>
+        </div>
     </main>
 </div>
 
@@ -299,12 +184,6 @@
     let isStreaming = false;
     let currentEventSource = null;
     let hasMessages = false;
-    let selectedResumeId = null;
-    let selectedSessionId = null;
-    let currentQuestions = [];
-    let currentReportHtml = '';
-    let interviewRefreshTimer = null;
-    let interviewView = 'resume';
 
     const CONV_STORAGE_KEY = 'highway.conversationId';
     const CONV_TTL_MS = 30 * 60 * 1000;
@@ -331,35 +210,16 @@
         if (conversationId) saveConversationId(conversationId);
     }
 
-    function showModule(module) {
-        document.getElementById('chatModule').classList.toggle('active', module === 'chat');
-        document.getElementById('interviewModule').classList.toggle('active', module === 'interview');
-        document.getElementById('chatModuleBtn').classList.toggle('active', module === 'chat');
-        document.getElementById('interviewModuleBtn').classList.toggle('active', module === 'interview');
-        if (module === 'interview') {
-            startInterviewAutoRefresh();
-            loadResumes(false);
-        } else {
-            stopInterviewAutoRefresh();
-        }
-    }
-
     function showEmpty() {
         hasMessages = false;
-        showModule('chat');
         document.getElementById('emptyState').style.display = 'flex';
         document.getElementById('chatArea').classList.remove('active');
     }
 
     function showChat() {
         hasMessages = true;
-        showModule('chat');
         document.getElementById('emptyState').style.display = 'none';
         document.getElementById('chatArea').classList.add('active');
-    }
-
-    function showInterview() {
-        showModule('interview');
     }
 
     function newChat() {
@@ -405,7 +265,7 @@
         saveConversationId(id);
         loadConversations();
         var inner = document.getElementById('chatInner');
-        inner.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;font-size:14px;">加载中...</div>';
+        inner.innerHTML = '<div style="text-align:center;padding:40px;color:#999;font-size:14px;">加载中...</div>';
         showChat();
         try {
             var res = await fetch('/api/conversations/' + encodeURIComponent(id) + '/messages');
@@ -467,7 +327,6 @@
                     '</div>' +
                     '<div class="thinking-steps"></div>' +
                 '</div>' +
-                '<div class="reasoning-box"><span class="reasoning-text"></span><span class="cursor"></span></div>' +
                 '<div class="answer-content markdown-body typing-indicator"></div>' +
                 '<div class="references-content"></div>' +
                 '<div class="suggested-content"></div>' +
@@ -660,311 +519,6 @@
 
     function renderSuggested(el, qs) {
         el.innerHTML = '<div class="suggested">' + qs.map(function(q) { return '<span class="suggested-tag" onclick="askSuggested(this)">' + escapeHtml(q) + '</span>'; }).join('') + '</div>';
-    }
-
-    function showInterviewError(message) {
-        var alert = document.getElementById('interviewAlert');
-        alert.textContent = message;
-        alert.style.display = message ? 'block' : 'none';
-    }
-
-    async function interviewFetch(url, options) {
-        showInterviewError('');
-        var res = await fetch(url, options || {});
-        if (!res.ok) {
-            var message = '请求失败：' + res.status;
-            try {
-                var errorBody = await res.json();
-                message = errorBody.message || errorBody.error || message;
-            } catch (e) {}
-            throw new Error(message);
-        }
-        return res.json();
-    }
-
-    function startInterviewAutoRefresh() {
-        if (interviewRefreshTimer) return;
-        interviewRefreshTimer = setInterval(refreshInterviewView, 5000);
-    }
-
-    function stopInterviewAutoRefresh() {
-        if (interviewRefreshTimer) {
-            clearInterval(interviewRefreshTimer);
-            interviewRefreshTimer = null;
-        }
-    }
-
-    async function refreshInterviewView() {
-        if (!document.getElementById('interviewModule').classList.contains('active')) {
-            stopInterviewAutoRefresh();
-            return;
-        }
-        await loadResumes(false);
-        if (selectedSessionId && interviewView === 'session') {
-            await selectSession(selectedSessionId, true);
-        } else if (selectedResumeId && interviewView === 'resume') {
-            await renderResumeDetail(true);
-        }
-    }
-
-    async function loadResumes(showLoading) {
-        var list = document.getElementById('resumeList');
-        if (showLoading !== false) list.innerHTML = '<div class="interview-loading">加载中...</div>';
-        try {
-            var data = await interviewFetch('/api/interview/resume/list?page=1&pageSize=20');
-            var items = data.items || [];
-            if (!items.length) {
-                list.innerHTML = '<div class="interview-empty">暂无简历，请先上传</div>';
-                return;
-            }
-            list.innerHTML = items.map(function(item) {
-                return '<div class="resume-item ' + (item.id === selectedResumeId ? 'active' : '') + '" onclick="selectResume(' + Number(item.id) + ')">' +
-                    '<div class="resume-title">' + escapeHtml(item.fileName || '未命名简历') + '</div>' +
-                    '<div class="resume-meta"><span class="status-pill ' + escapeHtml(item.status || '') + '">' + escapeHtml(item.status || '-') + '</span></div>' +
-                    '<div class="resume-meta">' + escapeHtml(item.targetPosition || '待分析') + '</div>' +
-                '</div>';
-            }).join('');
-        } catch (e) {
-            list.innerHTML = '<div class="interview-empty">简历加载失败</div>';
-            showInterviewError(e.message);
-        }
-    }
-
-    async function uploadResume() {
-        var fileInput = document.getElementById('resumeFile');
-        if (!fileInput.files.length) {
-            showInterviewError('请先选择简历文件');
-            return;
-        }
-        var formData = new FormData();
-        formData.append('file', fileInput.files[0]);
-        try {
-            var uploaded = await interviewFetch('/api/interview/resume/upload', { method: 'POST', body: formData });
-            fileInput.value = '';
-            selectedResumeId = uploaded.id;
-            selectedSessionId = null;
-            await loadResumes();
-            await selectResume(uploaded.id);
-        } catch (e) {
-            showInterviewError(e.message);
-        }
-    }
-
-    async function selectResume(id) {
-        selectedResumeId = id;
-        selectedSessionId = null;
-        currentQuestions = [];
-        interviewView = 'resume';
-        await loadResumes();
-        await renderResumeDetail();
-    }
-
-    async function renderResumeDetail(silent) {
-        interviewView = 'resume';
-        var detail = document.getElementById('interviewDetail');
-        if (!silent) detail.innerHTML = '<div class="interview-loading">加载中...</div>';
-        try {
-            var resume = await interviewFetch('/api/interview/resume/' + selectedResumeId);
-            var canAnalyze = resume.status === 'UPLOADED' || resume.status === 'FAILED';
-            var canStart = resume.status === 'ANALYZED';
-            detail.innerHTML =
-                '<div class="work-card-title">' +
-                    '<div><h2>' + escapeHtml(resume.fileName || '简历详情') + '</h2><p>当前状态：<span class="status-pill ' + escapeHtml(resume.status || '') + '">' + escapeHtml(resume.status || '-') + '</span></p></div>' +
-                '</div>' +
-                '<div class="interview-actions">' +
-                    '<button class="interview-primary" onclick="analyzeResume()" ' + (canAnalyze ? '' : 'disabled') + '>分析简历</button>' +
-                    '<button class="interview-secondary" onclick="startInterviewSession()" ' + (canStart ? '' : 'disabled') + '>创建面试</button>' +
-                    '<button class="interview-secondary" onclick="refreshInterviewView()">刷新状态</button>' +
-                    (resume.status === 'ANALYZED' ? '<button class="interview-secondary" onclick="loadResumeReport()">查看简历报告</button>' : '') +
-                '</div>' +
-                (resume.failureReason ? '<div class="interview-alert" style="display:block">' + escapeHtml(resume.failureReason) + '</div>' : '') +
-                renderTaskSummary(resume.latestTask) +
-                '<div class="summary-grid">' +
-                    '<div class="summary-card"><h3>分析摘要</h3><div class="interview-summary">' + escapeHtml(resume.analysisSummary || '暂无分析摘要') + '</div></div>' +
-                    '<div class="summary-card"><h3>面试计划</h3><div class="interview-summary">' + escapeHtml(resume.interviewPlanSummary || '暂无面试计划') + '</div></div>' +
-                '</div>' +
-                '<div class="summary-card" style="margin-top:14px"><h3>面试记录</h3>' + renderSessionChips(resume.recentSessions || []) + '</div>';
-        } catch (e) {
-            detail.innerHTML = '<div class="interview-empty">详情加载失败</div>';
-            showInterviewError(e.message);
-        }
-    }
-
-    function renderSessionChips(sessions) {
-        if (!sessions.length) return '<div class="interview-empty" style="padding:24px 10px">暂无面试记录</div>';
-        return '<div class="session-list">' + sessions.map(function(session) {
-            return '<button class="session-chip ' + (session.id === selectedSessionId ? 'active' : '') + '" onclick="selectSession(' + Number(session.id) + ')">#' + escapeHtml(session.id) + ' ' + escapeHtml(session.status || '-') + '</button>';
-        }).join('') + '</div>';
-    }
-
-    function renderTaskSummary(task) {
-        if (!task) return '';
-        return '<div class="summary-card" style="margin-top:14px"><h3>任务状态</h3>' +
-            '<div class="interview-summary">' +
-                '<span class="status-pill ' + escapeHtml(task.status || '') + '">' + escapeHtml(task.status || '-') + '</span> ' +
-                escapeHtml(task.taskType || '') +
-                (task.failureReason ? '\n失败原因：' + escapeHtml(task.failureReason) : '') +
-                (task.outputSummary ? '\n结果：' + escapeHtml(task.outputSummary) : '') +
-            '</div></div>';
-    }
-
-    async function analyzeResume() {
-        var detail = document.getElementById('interviewDetail');
-        detail.innerHTML = '<div class="interview-loading">正在分析简历并生成面试计划...</div>';
-        try {
-            await interviewFetch('/api/interview/resume/' + selectedResumeId + '/analyze', { method: 'POST' });
-            await loadResumes();
-            await renderResumeDetail();
-        } catch (e) {
-            showInterviewError(e.message);
-            await renderResumeDetail();
-        }
-    }
-
-    async function loadResumeReport() {
-        try {
-            var report = await interviewFetch('/api/interview/resume/' + selectedResumeId + '/report');
-            renderHtmlReport('简历评估报告', report.content);
-        } catch (e) {
-            showInterviewError(e.message);
-        }
-    }
-
-    async function startInterviewSession() {
-        var detail = document.getElementById('interviewDetail');
-        detail.innerHTML = '<div class="interview-loading">正在生成 4 轮面试题...</div>';
-        try {
-            var session = await interviewFetch('/api/interview/session/start', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ resumeId: selectedResumeId })
-            });
-            selectedSessionId = session.id;
-            await loadResumes();
-            await selectSession(session.id);
-        } catch (e) {
-            showInterviewError(e.message);
-            await renderResumeDetail();
-        }
-    }
-
-    async function selectSession(id, silent) {
-        selectedSessionId = id;
-        interviewView = 'session';
-        try {
-            var session = await interviewFetch('/api/interview/session/' + id);
-            if (session.status === 'COMPLETED') {
-                await renderSessionReport(session);
-            } else if (!silent || session.status === 'GENERATING' || session.status === 'EVALUATING' || session.status === 'GENERATE_FAILED' || session.status === 'EVALUATE_FAILED') {
-                await renderQuestionPanel(session);
-            }
-        } catch (e) {
-            showInterviewError(e.message);
-        }
-    }
-
-    async function renderQuestionPanel(session) {
-        var detail = document.getElementById('interviewDetail');
-        var questionData = await interviewFetch('/api/interview/session/' + session.id + '/questions');
-        currentQuestions = [];
-        detail.innerHTML =
-            '<div class="work-card-title">' +
-                '<div><h2>面试 Session #' + escapeHtml(session.id) + '</h2><p><span class="status-pill ' + escapeHtml(session.status || '') + '">' + escapeHtml(session.status || '-') + '</span> 已答 ' + escapeHtml(session.answeredCount || 0) + ' / ' + escapeHtml(session.totalCount || 0) + '</p></div>' +
-            '</div>' +
-            (session.failureReason ? '<div class="interview-alert" style="display:block">' + escapeHtml(session.failureReason) + '</div>' : '') +
-            '<div class="interview-actions">' +
-                '<button class="interview-secondary" onclick="renderResumeDetail()">返回简历</button>' +
-                '<button class="interview-secondary" onclick="refreshInterviewView()">刷新状态</button>' +
-                '<button class="interview-secondary" onclick="saveInterviewAnswers()">保存答案</button>' +
-                '<button class="interview-primary" onclick="submitInterviewSession()">提交评估</button>' +
-                (session.status === 'GENERATE_FAILED' ? '<button class="interview-danger" onclick="retryGenerateQuestions()">重新生成题目</button>' : '') +
-            '</div>' +
-            renderQuestionRounds(questionData.rounds || []);
-    }
-
-    function renderQuestionRounds(rounds) {
-        if (!rounds.length) return '<div class="interview-empty">暂无题目，请刷新状态或重新生成</div>';
-        return rounds.map(function(round) {
-            return '<div class="question-round">' +
-                '<div class="round-header">第 ' + escapeHtml(round.roundNumber) + ' 轮：' + escapeHtml(round.roundName || '') + ' · ' + escapeHtml(round.difficulty || '') + '</div>' +
-                (round.questions || []).map(function(question) {
-                    currentQuestions.push(question);
-                    return '<div class="question-item">' +
-                        '<div class="question-content">' + escapeHtml(question.questionNumber) + '. ' + escapeHtml(question.content || '') + '</div>' +
-                        '<textarea class="question-answer" data-question-id="' + Number(question.id) + '" placeholder="请输入你的回答...">' + escapeHtml(question.userAnswer || '') + '</textarea>' +
-                        (question.feedback ? '<div class="question-feedback">反馈：' + escapeHtml(question.feedback) + '</div>' : '') +
-                    '</div>';
-                }).join('') +
-            '</div>';
-        }).join('');
-    }
-
-    function collectAnswers() {
-        return Array.from(document.querySelectorAll('.question-answer')).map(function(textarea) {
-            return { questionId: Number(textarea.dataset.questionId), answer: textarea.value };
-        });
-    }
-
-    async function saveInterviewAnswers() {
-        try {
-            var session = await interviewFetch('/api/interview/session/' + selectedSessionId + '/answers/save', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ answers: collectAnswers() })
-            });
-            await renderQuestionPanel(session);
-        } catch (e) {
-            showInterviewError(e.message);
-        }
-    }
-
-    async function submitInterviewSession() {
-        var detail = document.getElementById('interviewDetail');
-        var answers = collectAnswers();
-        detail.innerHTML = '<div class="interview-loading">正在评估答案并生成报告...</div>';
-        try {
-            var session = await interviewFetch('/api/interview/session/' + selectedSessionId + '/submit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ answers: answers })
-            });
-            if (session.status === 'COMPLETED') await renderSessionReport(session); else await renderQuestionPanel(session);
-        } catch (e) {
-            showInterviewError(e.message);
-            await selectSession(selectedSessionId);
-        }
-    }
-
-    async function retryGenerateQuestions() {
-        try {
-            var session = await interviewFetch('/api/interview/session/' + selectedSessionId + '/retry-generate', { method: 'POST' });
-            await renderQuestionPanel(session);
-        } catch (e) {
-            showInterviewError(e.message);
-        }
-    }
-
-    async function renderSessionReport(session) {
-        var report = await interviewFetch('/api/interview/session/' + session.id + '/report');
-        renderHtmlReport('面试报告 #' + session.id, report.content, session);
-    }
-
-    function renderHtmlReport(title, html, session) {
-        interviewView = 'report';
-        currentReportHtml = html || '';
-        var detail = document.getElementById('interviewDetail');
-        detail.innerHTML =
-            '<div class="work-card-title">' +
-                '<div><h2>' + escapeHtml(title) + '</h2>' +
-                (session ? '<p><span class="status-pill ' + escapeHtml(session.status || '') + '">' + escapeHtml(session.status || '-') + '</span> 总体等级：' + escapeHtml(session.overallGrade || '-') + '</p>' : '') +
-                '</div>' +
-            '</div>' +
-            '<div class="interview-actions">' +
-                '<button class="interview-secondary" onclick="renderResumeDetail()">返回简历</button>' +
-                (selectedSessionId ? '<button class="interview-secondary" onclick="selectSession(' + selectedSessionId + ')">返回面试</button>' : '') +
-            '</div>' +
-            '<iframe class="report-frame" id="reportFrame" sandbox=""></iframe>';
-        document.getElementById('reportFrame').srcdoc = currentReportHtml;
     }
 
     function finishStream(es) {
