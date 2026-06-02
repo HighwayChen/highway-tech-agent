@@ -77,6 +77,19 @@ public class TavilySearchTool {
                 .build();
     }
 
+    public FunctionToolCallback asTimeToolCallback() {
+        return FunctionToolCallback.builder("get_current_time",
+                        (java.util.function.Function<Void, String>) v -> getCurrentTime())
+                .description("获取当前日期和时间，当用户问到时间相关的问题时调用此工具")
+                .inputType(Void.class)
+                .build();
+    }
+
+    private String getCurrentTime() {
+        return java.time.ZonedDateTime.now(java.time.ZoneId.of("Asia/Shanghai"))
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss (EEEE)"));
+    }
+
     public Mono<List<SearchResult>> searchReactive(String query) {
         Map<String, Object> requestBody = new java.util.HashMap<>();
         requestBody.put("query", query);

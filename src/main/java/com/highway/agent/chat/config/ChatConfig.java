@@ -23,7 +23,9 @@ public class ChatConfig {
                                   @Value("${agent.suggestion.count:5}") int suggestionCount) {
         return ChatClient.builder(chatModel)
                 .defaultSystem(promptTemplate.getChatSystemPrompt(suggestionCount))
-                .defaultToolCallbacks(tavilySearchTool.asToolCallback())
+                .defaultToolCallbacks(
+                        tavilySearchTool.asToolCallback(),
+                        tavilySearchTool.asTimeToolCallback())
                 .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
                 .build();
     }
